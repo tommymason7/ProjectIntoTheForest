@@ -8,6 +8,7 @@
 #include "Components/BoxComponent.h"
 
 #include "FoliageInstance.h"
+#include "Orb.h"
 #include "ParentArchitecture.h"
 #include "Teleporter.h"
 
@@ -71,6 +72,15 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* teleporterMesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	UStaticMesh* orbMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* orbMovementCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AOrb> orbClass;
+
 	// Terrain Grid
 	TArray<TArray<TSharedPtr<GridInfo>>> grid;
 
@@ -84,7 +94,9 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	// Track different meshes spawning
 	TMap<UStaticMesh*, AFoliageInstance*> _meshToActor;
 
-	//AInstancedFoliageActor* _foliage = nullptr;
+	ATeleporter* teleporter = nullptr;
+	int orbSpawnedCounter = 0;
+
 	
 public:	
 	// Sets default values for this actor's properties

@@ -24,4 +24,7 @@ public:
 	ATeleporter();
 
 	void Activate();
+
+	UFUNCTION()
+	void OrbCollected();
 };

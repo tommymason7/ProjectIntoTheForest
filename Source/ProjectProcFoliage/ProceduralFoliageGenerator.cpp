@@ -524,7 +524,7 @@ void AProceduralFoliageGenerator::SpawnGrid()
 						if (grid[x][y]->initialPick)
 						{
 							// Spawn Teleporter
-							ATeleporter* teleporter = GetWorld()->SpawnActor<ATeleporter>(hit.Location, FRotator());
+							teleporter = GetWorld()->SpawnActor<ATeleporter>(hit.Location, FRotator());
 							teleporter->setMesh(teleporterMesh);
 						}
 						else
@@ -542,7 +542,6 @@ void AProceduralFoliageGenerator::SpawnGrid()
 					}
 					case GridOption::Foliage:
 					{
-						//AActor* foliage = GetWorld()->SpawnActor<AActor>(hit.Location, FRotator());
 						AFoliageInstance* foliage = _meshToActor.FindRef(grid[x][y]->selectedMesh);
 						if (grid[x][y]->selectedMesh && foliage)
 						{
@@ -560,6 +559,20 @@ void AProceduralFoliageGenerator::SpawnGrid()
 						break;
 					}
 					case GridOption::None:
+						if (orbSpawnedCounter < numOfOrbsToSpawn)
+						{
+							// Spawn orb
+							AOrb* orb = GetWorld()->SpawnActor<AOrb>(hit.Location, FRotator());
+							if (orb)
+							{
+								orb->orbGrabbedDelegate.AddUObject(teleporter, &ATeleporter::OrbCollected);
+								orb->setMesh(orbMesh);
+								orb->SetTimelineCurve(orbMovementCurve);
+								orb->Start();
+
+								orbSpawnedCounter++;
+							}
+						}
 						break;
 					}
 				}

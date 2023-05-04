@@ -14,3 +14,8 @@ void ATeleporter::Activate()
 {
 
 }
+
+void ATeleporter::OrbCollected()
+{
+	// Increase tracking of orbs
+}
