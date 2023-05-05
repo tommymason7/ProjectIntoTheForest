@@ -67,9 +67,6 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	UCurveFloat* orbMovementCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<AOrb> orbClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	FName TeleporterActiveMaterialSlotName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))

@@ -8,7 +8,6 @@ ATeleporter::ATeleporter()
 	// Create subobject for mesh and attach to root
 	Box = CreateDefaultSubobject<UBoxComponent>(TEXT("Volume"));
 	Box->SetupAttachment(meshComponent);
-	Box->SetHiddenInGame(false);
 }
 
 void ATeleporter::BeginPlay()
