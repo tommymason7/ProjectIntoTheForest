@@ -8,8 +8,10 @@
 #include "Components/BoxComponent.h"
 
 #include "FoliageInstance.h"
+#include "GameMode_Procedural.h"
 #include "Orb.h"
 #include "ParentArchitecture.h"
+#include "StartingManager.h"
 #include "Teleporter.h"
 
 #include "ProceduralFoliageGenerator.generated.h"
@@ -73,6 +75,12 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	UMaterialInstance* TeleporterActiveMaterial;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	TSoftObjectPtr<UWorld> LevelToLoad;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	AStartingManager* starterManager;
+
 	// Terrain Grid
 	TArray<TArray<TSharedPtr<GridInfo>>> grid;
 
@@ -98,6 +106,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayerTeleporting();
 
 public:	
 	// Called every frame

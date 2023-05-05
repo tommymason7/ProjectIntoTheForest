@@ -5,4 +5,8 @@
 
 void AGameMode_Procedural::BeginPlay()
 {
+	Super::BeginPlay();
+
+	// Call BP Implemented Function
+	//CreateLoadingScreen();
 }

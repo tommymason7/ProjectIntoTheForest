@@ -26,8 +26,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	UFUNCTION()
-	void setMesh(UStaticMesh* newMesh);
+	virtual void setMesh(UStaticMesh* newMesh);
 
 // Variables
 protected:

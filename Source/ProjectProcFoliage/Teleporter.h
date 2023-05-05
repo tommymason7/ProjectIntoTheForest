@@ -4,10 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Components/BoxComponent.h"
+#include "Blueprint/UserWidget.h"
 
 #include "ParentArchitecture.h"
+#include "PlayerCharacter.h"
 
 #include "Teleporter.generated.h"
+
+DECLARE_DELEGATE(FPlayerOverlapped)
 
 /**
  * 
@@ -16,6 +20,9 @@ UCLASS()
 class PROJECTPROCFOLIAGE_API ATeleporter : public AParentArchitecture
 {
 	GENERATED_BODY()
+
+	UFUNCTION()
+	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* Box = nullptr;
@@ -31,8 +38,6 @@ class PROJECTPROCFOLIAGE_API ATeleporter : public AParentArchitecture
 public:
 	ATeleporter();
 
-	void Activate();
-
 	UFUNCTION()
 	void OrbCollected();
 
@@ -40,4 +45,11 @@ public:
 	void setPercentageNeeded(float perc);
 	void setActiveMaterial(UMaterialInterface* newMaterial);
 	void setActiverMaterialSlotName(FName slotName);
+
+	virtual void setMesh(UStaticMesh* newMesh) override;
+
+	FPlayerOverlapped teleportDelegate;
+
+protected:
+	void BeginPlay() override;
 };

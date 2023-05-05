@@ -39,8 +39,6 @@ void AProceduralFoliageGenerator::BeginPlay()
 
 		xSeperationAmnt = extent.X / numOfXCells;
 		ySeperationAmnt = extent.Y / numOfYCells;
-
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Initial pick seperation amnt x: %f seperation amnt y: %f"), xSeperationAmnt, ySeperationAmnt));
 	}
 
 	GenerateTerrainGrid(true);
@@ -68,9 +66,6 @@ void AProceduralFoliageGenerator::GenerateTerrainGrid(bool initialPick)
 		x = FMath::RandRange(0, numOfXCells - 1);
 		y = FMath::RandRange(0, numOfYCells - 1);
 
-		if (GEngine)
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Initial pick x: %d y: %d"), x, y));
-
 		// Spawning teleporter
 		GridOption option = GridOption::Architecture;
 
@@ -85,8 +80,6 @@ void AProceduralFoliageGenerator::GenerateTerrainGrid(bool initialPick)
 		// Get valid options and choose one
 		x = xyPair.Key;
 		y = xyPair.Value;
-
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Grid Generation queue x: %d y: %d possible num: %d"), x, y, grid[x][y]->possibilities.Num() - 1));
 
 		if (grid[x][y]->possibilities.Num() > 1)
 		{
@@ -115,7 +108,6 @@ void AProceduralFoliageGenerator::GenerateTerrainGrid(bool initialPick)
 		// If we looped through all options then we don't want to execute this
 		if (result)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Queue is empty x: %d y: %d"), xyPair.Key, xyPair.Value));
 			GridOption option = grid[xyPair.Key][xyPair.Value]->possibilities[FMath::RandRange(0, grid[xyPair.Key][xyPair.Value]->possibilities.Num() - 1)];
 			FillInGrid(xyPair.Key, xyPair.Value, option, initialPick);
 		}
@@ -171,8 +163,6 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 		FBoxSphereBounds bounds = grid[x][y]->selectedMesh->GetBounds();
 		extent = bounds.BoxExtent;
 
-		//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Extent X: %f X seperation amnt: %f"), extent.X, xSeperationAmnt));
-
 		// TODO If origin isn't in center of mesh this breaks
 		// Do we extend into both previous and next x tiles (Cardinal directions)
 		if (extent.X > xSeperationAmnt)
@@ -181,7 +171,6 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 			int tileAmnt = extent.X / xSeperationAmnt;
 			int i = 1;
 
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("TileAmnt: %d"), tileAmnt));
 			for (; i <= tileAmnt; i++)
 			{
 				// Check if x - i is less than 0
@@ -220,7 +209,6 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 				case GridOption::None:
 					break;
 				case GridOption::Architecture:
-					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("over tile x - i removing architecture")));
 					grid[x - i][y]->possibilities.Remove(GridOption::Architecture);
 					break;
 				case GridOption::Foliage:
@@ -237,7 +225,6 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 				case GridOption::None:
 					break;
 				case GridOption::Architecture:
-					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("over tile x + i removing architecture")));
 					grid[x + i][y]->possibilities.Remove(GridOption::Architecture);
 					break;
 				case GridOption::Foliage:
@@ -261,7 +248,6 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 				case GridOption::None:
 					break;
 				case GridOption::Architecture:
-					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("x - 1 removing architecture")));
 					grid[x - 1][y]->possibilities.Remove(GridOption::Architecture);
 					break;
 				case GridOption::Foliage:
@@ -278,7 +264,6 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 				case GridOption::None:
 					break;
 				case GridOption::Architecture:
-					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("x + 1 removing architecture")));
 					grid[x + 1][y]->possibilities.Remove(GridOption::Architecture);
 					break;
 				case GridOption::Foliage:
@@ -368,7 +353,6 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 				{
 				case GridOption::None:
 					break;
-					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("y - 1 removing architecture")));
 				case GridOption::Architecture:
 					grid[x][y - 1]->possibilities.Remove(GridOption::Architecture);
 					break;
@@ -386,7 +370,6 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 				case GridOption::None:
 					break;
 				case GridOption::Architecture:
-					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("y + 1 removing architecture")));
 					grid[x][y + 1]->possibilities.Remove(GridOption::Architecture);
 					break;
 				case GridOption::Foliage:
@@ -457,7 +440,6 @@ bool AProceduralFoliageGenerator::IsGridFilled()
 		}
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Grid is full")));
 	return true;
 }
 
@@ -529,6 +511,7 @@ void AProceduralFoliageGenerator::SpawnGrid()
 							teleporter->setPercentageNeeded(percentageOfOrbsNeeded);
 							teleporter->setActiveMaterial(TeleporterActiveMaterial);
 							teleporter->setActiverMaterialSlotName(TeleporterActiveMaterialSlotName);
+							teleporter->teleportDelegate.BindUFunction(this, "PlayerTeleporting");
 						}
 						else
 						{
@@ -585,6 +568,18 @@ void AProceduralFoliageGenerator::SpawnGrid()
 	}
 
 	teleporter->setNumSpawned(orbSpawnedCounter);
+
+	// Couldn't get the Widget to be valid during a call to deleteloadingscreen so scrapping this
+	/*AGameMode_Procedural* gm = Cast<AGameMode_Procedural>(GetWorld()->GetAuthGameMode());
+	if (gm)
+	{
+		gm->DeleteLoadingScreen();
+	}*/
+
+	if (starterManager)
+	{
+		starterManager->DeleteLoadingScreen();
+	}
 }
 
 void AProceduralFoliageGenerator::ForwardOrbCollected()

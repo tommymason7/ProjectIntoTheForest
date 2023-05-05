@@ -17,8 +17,15 @@ class PROJECTPROCFOLIAGE_API AGameMode_Procedural : public AGameModeBase
 {
 	GENERATED_BODY()
 
-	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UI, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UUserWidget> loadingScreen;
 	
 public:
 	virtual void BeginPlay() override;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void CreateLoadingScreen();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void DeleteLoadingScreen();
 };
