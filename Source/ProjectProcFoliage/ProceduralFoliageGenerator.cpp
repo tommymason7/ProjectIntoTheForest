@@ -524,12 +524,15 @@ void AProceduralFoliageGenerator::SpawnGrid()
 						if (grid[x][y]->initialPick)
 						{
 							// Spawn Teleporter
-							teleporter = GetWorld()->SpawnActor<ATeleporter>(hit.Location, FRotator());
+							teleporter = GetWorld()->SpawnActor<ATeleporter>(hit.Location, FRotator(0, FMath::RandRange(0.0, 359.0), 0));
 							teleporter->setMesh(teleporterMesh);
+							teleporter->setPercentageNeeded(percentageOfOrbsNeeded);
+							teleporter->setActiveMaterial(TeleporterActiveMaterial);
+							teleporter->setActiverMaterialSlotName(TeleporterActiveMaterialSlotName);
 						}
 						else
 						{
-							AParentArchitecture* architecture = GetWorld()->SpawnActor<AParentArchitecture>(hit.Location, FRotator());
+							AParentArchitecture* architecture = GetWorld()->SpawnActor<AParentArchitecture>(hit.Location, FRotator(0, FMath::RandRange(0.0, 359.0), 0));
 							if (architecture && grid[x][y]->selectedMesh)
 							{
 								FBoxSphereBounds bounds = grid[x][y]->selectedMesh->GetBounds();
@@ -550,7 +553,7 @@ void AProceduralFoliageGenerator::SpawnGrid()
 						}
 						else if (grid[x][y]->selectedMesh && !foliage)
 						{
-						    foliage = GetWorld()->SpawnActor<AFoliageInstance>(hit.Location, FRotator());
+						    foliage = GetWorld()->SpawnActor<AFoliageInstance>(hit.Location, FRotator(0, FMath::RandRange(0.0, 359.0), 0));
 							foliage->SetMesh(grid[x][y]->selectedMesh);
 							foliage->AddInstance(FTransform(hit.Location), true);
 
@@ -565,7 +568,8 @@ void AProceduralFoliageGenerator::SpawnGrid()
 							AOrb* orb = GetWorld()->SpawnActor<AOrb>(hit.Location, FRotator());
 							if (orb)
 							{
-								orb->orbGrabbedDelegate.AddUObject(teleporter, &ATeleporter::OrbCollected);
+								// Teleporter is first item spawned so we can bind teleporter to orb function
+								orb->orbGrabbedDelegate.AddUFunction(this, "ForwardOrbCollected");
 								orb->setMesh(orbMesh);
 								orb->SetTimelineCurve(orbMovementCurve);
 								orb->Start();
@@ -579,4 +583,11 @@ void AProceduralFoliageGenerator::SpawnGrid()
 			}
 		}
 	}
+
+	teleporter->setNumSpawned(orbSpawnedCounter);
+}
+
+void AProceduralFoliageGenerator::ForwardOrbCollected()
+{
+	teleporter->OrbCollected();
 }

@@ -38,30 +38,16 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	UBoxComponent* _volume = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-		int numOfXCells = 10;
+	int numOfXCells = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-		int numOfYCells = 10;
+	int numOfYCells = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-		int numOfOrbsToSpawn = 1;
+	int numOfOrbsToSpawn = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-		float percentageOfOrbsNeeded = 0.5;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-		int numOfOrbsCollectedThisLevel = 0;
-
-	/*UPROPERTY()
-	exitStructureClass;
-
-	UPROPERTY()
-	pickupItemClass;
-
-	// Really need overall architecture bounds so static meshes would be better
-	UPROPERTY()
-	architectureOptionsToSpawnChance
-	*/
+	float percentageOfOrbsNeeded = 0.5;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	TArray<UStaticMesh*> foliageOptions;
@@ -81,6 +67,12 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<AOrb> orbClass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	FName TeleporterActiveMaterialSlotName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	UMaterialInstance* TeleporterActiveMaterial;
+
 	// Terrain Grid
 	TArray<TArray<TSharedPtr<GridInfo>>> grid;
 
@@ -95,6 +87,7 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	TMap<UStaticMesh*, AFoliageInstance*> _meshToActor;
 
 	ATeleporter* teleporter = nullptr;
+	int numOfOrbsCollectedThisLevel = 0;
 	int orbSpawnedCounter = 0;
 
 	
@@ -120,5 +113,8 @@ private:
 	void SpawnGrid();
 
 	bool GetNextUnfilledCell(TTuple<int, int>& xyPair);
+
+	UFUNCTION()
+	void ForwardOrbCollected();
 
 };

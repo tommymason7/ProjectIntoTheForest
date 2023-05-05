@@ -24,13 +24,15 @@ class PROJECTPROCFOLIAGE_API AOrb : public AInteractableParent
 	UParticleSystemComponent* particleSystem = nullptr;
 
 	UPROPERTY()
-	UTimelineComponent* floatingMovementTimeline = nullptr;
+	FTimeline floatingMovementTimeline;
 
 	FOnTimelineFloat floatingTimelineCallback;
 
 	UCurveFloat* timelineCurve;
 
 	FVector originalLocation;
+
+	float ZOffset = 0.0;
 
 	UFUNCTION()
 	void FloatingTimelineCallback(float val);
@@ -49,4 +51,6 @@ protected:
 	void BeginPlay() override;
 
 	void ObjectOverlapping(APlayerCharacter* player) override;
+
+	void Tick(float deltaTime) override;
 };

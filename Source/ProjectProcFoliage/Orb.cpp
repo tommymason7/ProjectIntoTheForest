@@ -11,13 +11,23 @@ AOrb::AOrb()
 	// Create Particle System
 	particleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle System"));
 	particleSystem->SetupAttachment(meshComponent);
-
-	// Create timeline for floating movement
-	floatingMovementTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("Floating Movement"));
 }
 
 void AOrb::BeginPlay()
 {
+	Super::BeginPlay();
+}
+
+void AOrb::Tick(float deltaTime)
+{
+	Super::Tick(deltaTime);
+
+	floatingMovementTimeline.TickTimeline(deltaTime);
+}
+
+void AOrb::FloatingTimelineCallback(float val)
+{
+	SetActorLocation(FVector(originalLocation.X, originalLocation.Y, originalLocation.Z + val));
 }
 
 void AOrb::Start()
@@ -27,20 +37,14 @@ void AOrb::Start()
 	// Start particle system
 
 	// Setup bobbing motion
-	floatingMovementTimeline->SetLooping(true);
-	floatingMovementTimeline->SetTimelineLength(5.0f);
-	floatingMovementTimeline->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
-	floatingMovementTimeline->SetPlaybackPosition(0.0f, false);
+	floatingMovementTimeline.SetLooping(true);
+	floatingMovementTimeline.SetTimelineLength(5.0f);
+	floatingMovementTimeline.SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
+	floatingMovementTimeline.SetPlaybackPosition(0.0f, false);
 
-	floatingTimelineCallback.BindUFunction(this, "FloatingTimelineCallback");
-	floatingMovementTimeline->AddInterpFloat(timelineCurve, floatingTimelineCallback);
-	floatingMovementTimeline->Play();
-}
-
-void AOrb::FloatingTimelineCallback(float val)
-{
-
-	SetActorLocation(FVector(originalLocation.X, originalLocation.Y, originalLocation.Z + val));
+	floatingTimelineCallback.BindUFunction(this, FName("FloatingTimelineCallback"));
+	floatingMovementTimeline.AddInterpFloat(timelineCurve, floatingTimelineCallback);
+	floatingMovementTimeline.PlayFromStart();
 }
 
 void AOrb::SetTimelineCurve(UCurveFloat* newTimelineCurve)

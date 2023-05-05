@@ -20,6 +20,14 @@ class PROJECTPROCFOLIAGE_API ATeleporter : public AParentArchitecture
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* Box = nullptr;
 
+	int numCollected = 0;
+	int numSpawned = -1;
+	float percentageNeeded = -1;
+	FName materialSlotToChange;
+
+	UMaterialInterface* activeMat;
+
+
 public:
 	ATeleporter();
 
@@ -27,4 +35,9 @@ public:
 
 	UFUNCTION()
 	void OrbCollected();
+
+	void setNumSpawned(int spawnedAmnt);
+	void setPercentageNeeded(float perc);
+	void setActiveMaterial(UMaterialInterface* newMaterial);
+	void setActiverMaterialSlotName(FName slotName);
 };

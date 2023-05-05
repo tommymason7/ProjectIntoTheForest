@@ -57,13 +57,11 @@ void AInteractableParent::setMesh(UStaticMesh* newMesh)
 void AInteractableParent::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
 	                                     bool bFromSweep, const FHitResult& SweepResult)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Interactable Parent Overlapping")));
 	// If we are overlapping the Player then we should call ObjectOverlapping function that is overrideable
 	APlayerCharacter* player = Cast<APlayerCharacter>(OtherActor);
 
 	if (player)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Player is valid")));
 		ObjectOverlapping(player);
 	}
 }
