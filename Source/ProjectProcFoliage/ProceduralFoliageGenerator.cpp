@@ -83,19 +83,24 @@ void AProceduralFoliageGenerator::GenerateTerrainGrid(bool initialPick)
 
 		if (grid[x][y]->possibilities.Num() > 1)
 		{
+			// Get random number between 0 and 1
+			float chance = FMath::RandRange(0.0, 1.0);
+			
+			// Get the option associated with the generated chance
+			GridOption option = getOptionFromChance(chance);
+			int index = grid[x][y]->possibilities.Find(option);
 
-			GridOption option = grid[x][y]->possibilities[FMath::RandRange(0, grid[x][y]->possibilities.Num() - 1)];
-
-			//GridOption option = GridOption::Foliage;
+			// Make sure that we have the proper option set
+			if (index == INDEX_NONE)
+			{
+				option = GridOption::None;
+			}
 
 			FillInGrid(x, y, option, initialPick);
 		}
 
 		// Remove the pair for the queue
 		_gridGenerationQueue.Remove(xyPair);
-
-		// Going to need to check for selected mesh extent interfering with already set grid pieces
-		// If it isn't then just set as none
 	}
 	else
 	{
@@ -108,7 +113,19 @@ void AProceduralFoliageGenerator::GenerateTerrainGrid(bool initialPick)
 		// If we looped through all options then we don't want to execute this
 		if (result)
 		{
-			GridOption option = grid[xyPair.Key][xyPair.Value]->possibilities[FMath::RandRange(0, grid[xyPair.Key][xyPair.Value]->possibilities.Num() - 1)];
+			// Get random number between 0 and 1
+			float chance = FMath::RandRange(0.0, 1.0);
+
+			// Get the option associated with the generated chance
+			GridOption option = getOptionFromChance(chance);
+			int index = grid[xyPair.Key][xyPair.Value]->possibilities.Find(option);
+
+			// Make sure that we have the proper option set
+			if (index == INDEX_NONE)
+			{
+				option = GridOption::None;
+			}
+
 			FillInGrid(xyPair.Key, xyPair.Value, option, initialPick);
 		}
 	}
@@ -143,8 +160,21 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 	case GridOption::None:
 		break;
 	case GridOption::Architecture:
-		grid[x][y]->selectedMesh = architectureOptions[FMath::RandRange(0, architectureOptions.Num() - 1)];
+	{
+		float chance = FMath::RandRange(0.0, 1.0);
+		UStaticMesh* chosenMesh = getArchitectureFromChance(chance);
+		if(chosenMesh)
+		{
+			grid[x][y]->selectedMesh = chosenMesh;
+		}
+		// What happens when we don't select a mesh?
+		// Could handle that with the line below
+		// We can just not spawn anything even tho we have it blocked out as architecture
+		//   grid[x][y]->selectedMesh = architectureOptions[FMath::RandRange(0, architectureOptions.Num() - 1)];
+		// We can change this to become a none as well
+		
 		break;
+	}
 	case GridOption::Foliage:
 		grid[x][y]->selectedMesh = foliageOptions[FMath::RandRange(0, foliageOptions.Num() - 1)];
 		break;
@@ -513,7 +543,7 @@ void AProceduralFoliageGenerator::SpawnGrid()
 							teleporter->setActiverMaterialSlotName(TeleporterActiveMaterialSlotName);
 							teleporter->teleportDelegate.BindUFunction(this, "PlayerTeleporting");
 						}
-						else
+						else if(grid[x][y]->selectedMesh)
 						{
 							AParentArchitecture* architecture = GetWorld()->SpawnActor<AParentArchitecture>(hit.Location, FRotator(0, FMath::RandRange(0.0, 359.0), 0));
 							if (architecture && grid[x][y]->selectedMesh)
@@ -560,6 +590,11 @@ void AProceduralFoliageGenerator::SpawnGrid()
 								orbSpawnedCounter++;
 							}
 						}
+						else if(!enemy)
+						{
+							// Need to adjust the Z for spawning of the Enemy
+							enemy = GetWorld()->SpawnActor<ACharacter>(enemyClass, FVector(hit.Location.X, hit.Location.Y, 1000), FRotator());
+						}
 						break;
 					}
 				}
@@ -585,4 +620,29 @@ void AProceduralFoliageGenerator::SpawnGrid()
 void AProceduralFoliageGenerator::ForwardOrbCollected()
 {
 	teleporter->OrbCollected();
+}
+
+GridOption AProceduralFoliageGenerator::getOptionFromChance(float randNum)
+{
+	for (auto it : typeToMinMax)
+	{
+		if (randNum > it.Value.min && randNum < it.Value.max)
+		{
+			return it.Key;
+		}
+	}
+	return GridOption::None;
+}
+
+UStaticMesh* AProceduralFoliageGenerator::getArchitectureFromChance(float randNum)
+{
+	for (auto it : architectureSpawnChance)
+	{
+		if (randNum > it.Value.min && randNum < it.Value.max)
+		{
+			return it.Key;
+		}
+	}
+
+	return nullptr;
 }

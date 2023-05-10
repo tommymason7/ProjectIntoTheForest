@@ -16,17 +16,31 @@
 
 #include "ProceduralFoliageGenerator.generated.h"
 
+UENUM()
+enum GridOption
+{
+	None,
+	Architecture,
+	Foliage
+};
+
+USTRUCT(BlueprintType)
+struct FMinMax
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float min = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float max = 0.0f;
+};
+
+
 UCLASS()
 class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 {
 	GENERATED_BODY()
-
-	enum GridOption
-	{
-		None,
-		Architecture,
-		Foliage
-	};
 
 	struct GridInfo
 	{
@@ -35,6 +49,8 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 		bool rootLocation = false;
 		bool initialPick = false;
 	};
+
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* _volume = nullptr;
@@ -78,6 +94,17 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	AStartingManager* starterManager;
 
+	// This allows the user to control whats allowed to spawn via types and chance
+	// The pair refers to the Minimum as the Key and the Maximum as the value. Ex: (0.1, 0.4)
+	// The pair minimum value is 0 and the maximum value 1
+	// Each entry should have their own range to allow just grabbing a random float from 0 to 1 and determine 
+	//  if we have successfully gotten the correct value for said type
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	TMap<TEnumAsByte<GridOption>, FMinMax> typeToMinMax;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	TMap<UStaticMesh*, FMinMax> architectureSpawnChance;
+
 	// Terrain Grid
 	TArray<TArray<TSharedPtr<GridInfo>>> grid;
 
@@ -87,10 +114,19 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 
 	TArray<TPair<int, int>> _gridGenerationQueue;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class ACharacter> enemyClass;
+
+	// Track if Enemy was spawned
+	UPROPERTY()
+	ACharacter* enemy = nullptr;
+
 
 	// Track different meshes spawning
+	UPROPERTY()
 	TMap<UStaticMesh*, AFoliageInstance*> _meshToActor;
 
+	UPROPERTY()
 	ATeleporter* teleporter = nullptr;
 	int numOfOrbsCollectedThisLevel = 0;
 	int orbSpawnedCounter = 0;
@@ -125,4 +161,8 @@ private:
 	UFUNCTION()
 	void ForwardOrbCollected();
 
+	//TODO Could template this function with getArchitectureFromChance
+	GridOption getOptionFromChance(float randNum);
+
+	UStaticMesh* getArchitectureFromChance(float randNum);
 };
