@@ -168,9 +168,7 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 			grid[x][y]->selectedMesh = chosenMesh;
 		}
 		// What happens when we don't select a mesh?
-		// Could handle that with the line below
 		// We can just not spawn anything even tho we have it blocked out as architecture
-		//   grid[x][y]->selectedMesh = architectureOptions[FMath::RandRange(0, architectureOptions.Num() - 1)];
 		// We can change this to become a none as well
 		
 		break;
@@ -523,7 +521,7 @@ void AProceduralFoliageGenerator::SpawnGrid()
 
 			UE_LOG(LogTemp, Warning, TEXT("spawn grid x: %d grid y: %d spawn x: %d, spawn y: %d"), x, y, spawnX, spawnY);
 			GetWorld()->LineTraceSingleByChannel(hit, startLoc, endLoc, ECollisionChannel::ECC_WorldStatic);
-			DrawDebugLine(GetWorld(), startLoc, endLoc, hit.bBlockingHit ? FColor::Blue : FColor::Red, true, -1, 0, 3.0);
+			//DrawDebugLine(GetWorld(), startLoc, endLoc, hit.bBlockingHit ? FColor::Blue : FColor::Red, true, -1, 0, 3.0);
 
 			if (grid[x][y]->rootLocation)
 			{

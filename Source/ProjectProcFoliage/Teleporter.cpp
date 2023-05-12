@@ -30,7 +30,7 @@ void ATeleporter::OrbCollected()
 	if (numCollected / numSpawned >= percentageNeeded)
 	{
 		int32 matIndex = meshComponent->GetStaticMesh()->GetMaterialIndexFromImportedMaterialSlotName(materialSlotToChange);
-		meshComponent->GetStaticMesh()->SetMaterial(matIndex, activeMat);
+		meshComponent->SetMaterial(matIndex, activeMat);
 
 		// Turn on collision
 		Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);

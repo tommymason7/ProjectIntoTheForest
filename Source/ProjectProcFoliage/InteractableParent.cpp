@@ -14,7 +14,6 @@ AInteractableParent::AInteractableParent()
 	collisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	SetRootComponent(meshComponent);
 	collisionComponent->SetupAttachment(RootComponent);
-	//meshComponent->SetupAttachment(RootComponent);
 
 	// Setup Collision with player
 	meshComponent->SetCollisionProfileName(TEXT("WorldStatic"), true);
@@ -25,7 +24,6 @@ AInteractableParent::AInteractableParent()
 	collisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	collisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
 	collisionComponent->SetGenerateOverlapEvents(true);
-	collisionComponent->SetHiddenInGame(false);
 }
 
 // Called when the game starts or when spawned

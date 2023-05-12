@@ -71,9 +71,6 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	TArray<UStaticMesh*> foliageOptions;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	TArray<UStaticMesh*> architectureOptions;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* teleporterMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
