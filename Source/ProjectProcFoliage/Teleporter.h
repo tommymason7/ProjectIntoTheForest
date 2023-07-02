@@ -11,7 +11,7 @@
 
 #include "Teleporter.generated.h"
 
-DECLARE_DELEGATE(FPlayerOverlapped)
+DECLARE_DYNAMIC_DELEGATE(FPlayerOverlapped);
 
 /**
  * 
@@ -30,23 +30,33 @@ class PROJECTPROCFOLIAGE_API ATeleporter : public AParentArchitecture
 	int numCollected = 0;
 	int numSpawned = -1;
 	float percentageNeeded = -1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Materials, meta = (AllowPrivateAccess = "true"))
 	FName materialSlotToChange;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Materials, meta = (AllowPrivateAccess = "true"))
 	UMaterialInterface* activeMat;
 
 
 public:
 	ATeleporter();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void OrbCollected();
 
+	UFUNCTION(BlueprintCallable)
 	void setNumSpawned(int spawnedAmnt);
+
+	UFUNCTION(BlueprintCallable)
 	void setPercentageNeeded(float perc);
+
 	void setActiveMaterial(UMaterialInterface* newMaterial);
 	void setActiverMaterialSlotName(FName slotName);
 
 	virtual void setMesh(UStaticMesh* newMesh) override;
+
+	UFUNCTION(BlueprintCallable)
+	void SetTeleportDelegate(const FPlayerOverlapped& delegate);
 
 	FPlayerOverlapped teleportDelegate;
 

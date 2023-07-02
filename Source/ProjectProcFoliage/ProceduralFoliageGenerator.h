@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 #include "Components/BoxComponent.h"
+#include "Engine/DataTable.h"
 
 #include "FoliageInstance.h"
 #include "GameMode_Procedural.h"
@@ -13,6 +14,7 @@
 #include "ParentArchitecture.h"
 #include "StartingManager.h"
 #include "Teleporter.h"
+#include "DataTableStructs.h"
 
 #include "ProceduralFoliageGenerator.generated.h"
 
@@ -36,7 +38,6 @@ struct FMinMax
 	float max = 0.0f;
 };
 
-
 UCLASS()
 class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 {
@@ -56,37 +57,7 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	UBoxComponent* _volume = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	int numOfXCells = 10;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	int numOfYCells = 10;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	int numOfOrbsToSpawn = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	float percentageOfOrbsNeeded = 0.5;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	TArray<UStaticMesh*> foliageOptions;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	UStaticMesh* teleporterMesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	UStaticMesh* orbMesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	UCurveFloat* orbMovementCurve;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	FName TeleporterActiveMaterialSlotName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	UMaterialInstance* TeleporterActiveMaterial;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
-	TSoftObjectPtr<UWorld> LevelToLoad;
+	UDataTable* levelData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	AStartingManager* starterManager;
@@ -102,6 +73,32 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	TMap<UStaticMesh*, FMinMax> architectureSpawnChance;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	UDataTable* architectureInternalSpawnData;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	UDataTable* foliageData;
+
+
+	int numOfXCells = 10;
+	int numOfYCells = 10;
+	int numOfOrbsToSpawn = 1;
+	float percentageOfOrbsNeeded = 0.5;
+
+	UPROPERTY()
+	UStaticMesh* teleporterMesh;
+
+	UPROPERTY()
+	UStaticMesh* orbMesh;
+
+	UPROPERTY()
+	UCurveFloat* orbMovementCurve;
+
+	FName TeleporterActiveMaterialSlotName;
+
+	UPROPERTY()
+	UMaterialInstance* TeleporterActiveMaterial;
+
 	// Terrain Grid
 	TArray<TArray<TSharedPtr<GridInfo>>> grid;
 
@@ -113,6 +110,9 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class ACharacter> enemyClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Procedural, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class AOrb> orbClass;
 
 	// Track if Enemy was spawned
 	UPROPERTY()

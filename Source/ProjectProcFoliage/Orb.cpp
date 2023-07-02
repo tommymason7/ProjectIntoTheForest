@@ -7,10 +7,6 @@ AOrb::AOrb()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
-	// Create Particle System
-	particleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("Particle System"));
-	particleSystem->SetupAttachment(meshComponent);
 }
 
 void AOrb::BeginPlay()
@@ -35,6 +31,7 @@ void AOrb::Start()
 	originalLocation = GetActorLocation();
 
 	// Start particle system
+	UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraSystem, meshComponent, FName(), FVector(0.f), FRotator(0.f), EAttachLocation::SnapToTarget, true);
 
 	// Setup bobbing motion
 	floatingMovementTimeline.SetLooping(true);
@@ -52,10 +49,15 @@ void AOrb::SetTimelineCurve(UCurveFloat* newTimelineCurve)
 	timelineCurve = newTimelineCurve;
 }
 
+void AOrb::SetOrbCollectionDelegate(const FOrbGrabbed& delegate)
+{
+	orbGrabbedDelegate = delegate;
+}
+
 void AOrb::ObjectOverlapping(APlayerCharacter* player)
 {
 	// Execute delegate set earlier
-	orbGrabbedDelegate.Broadcast();
+	orbGrabbedDelegate.ExecuteIfBound();
 
 	GetWorld()->DestroyActor(this);
 }

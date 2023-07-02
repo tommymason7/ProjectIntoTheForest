@@ -18,6 +18,38 @@ void AProceduralFoliageGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 
+	ULevel* currentLevel = GetWorld()->GetCurrentLevel();
+	TArray<FName> rowNames = levelData->GetRowNames();
+
+	// Loop through all rows until the correct level is found
+	for (FName rowName : rowNames)
+	{
+		FLevelData* tmpData = levelData->FindRow<FLevelData>(rowName, "");
+		// TODO: Find a way to compare current level and a row in the data table, if we can use just names, it's a weak comparison but it'd work
+		// TODO: Make sure this works in a packages build
+		FString levelName;
+		FString throwaway;
+		currentLevel->GetPathName().Split(FString(":"), &levelName, &throwaway);
+		
+		if (tmpData->level->GetPathName() == levelName)
+		{
+			// Initialize variables to avoid replacing of variables
+			numOfXCells = tmpData->numOfXCells;
+			numOfYCells = tmpData->numOfYCells;
+			numOfOrbsToSpawn = tmpData->numOfOrbsToSpawn;
+			percentageOfOrbsNeeded = tmpData->percentageOfOrbsNeeded;
+			teleporterMesh = tmpData->teleporterMesh;
+			orbMesh = tmpData->orbMesh;
+			orbMovementCurve = tmpData->orbMovementCurve;
+			TeleporterActiveMaterialSlotName = tmpData->TeleporterActiveMaterialSlotName;
+			TeleporterActiveMaterial = tmpData->TeleporterActiveMaterial;
+
+			break;
+		}
+	}
+
+	// TODO: Probably should have a condition to verify that we polled the right data to prevent odd crashes
+
 	// Initial fill in Grid array
 	for (int x = 0; x < numOfXCells; x++)
 	{
@@ -152,30 +184,44 @@ void AProceduralFoliageGenerator::FillInGrid(int x, int y, GridOption option, bo
 		return opt != option;
 	});
 
-	//UE_LOG(LogTemp, Warning, TEXT("Fill in grid possibility x: %d y: %d num: %d"), x, y, grid[x][y]->possibilities.Num());
-
 	// Based on the selected option get a random item from the appropriate array
 	switch (*grid[x][y]->possibilities.begin())
 	{
-	case GridOption::None:
-		break;
-	case GridOption::Architecture:
-	{
-		float chance = FMath::RandRange(0.0, 1.0);
-		UStaticMesh* chosenMesh = getArchitectureFromChance(chance);
-		if(chosenMesh)
+		case GridOption::None:
+			break;
+		case GridOption::Architecture:
 		{
-			grid[x][y]->selectedMesh = chosenMesh;
+			float chance = FMath::RandRange(0.0, 1.0);
+			UStaticMesh* chosenMesh = getArchitectureFromChance(chance);
+			if (chosenMesh)
+			{
+				grid[x][y]->selectedMesh = chosenMesh;
+			}
+			// What happens when we don't select a mesh?
+			// We can just not spawn anything even tho we have it blocked out as architecture
+			// We can change this to become a none as well
+
+			break;
 		}
-		// What happens when we don't select a mesh?
-		// We can just not spawn anything even tho we have it blocked out as architecture
-		// We can change this to become a none as well
-		
-		break;
-	}
-	case GridOption::Foliage:
-		grid[x][y]->selectedMesh = foliageOptions[FMath::RandRange(0, foliageOptions.Num() - 1)];
-		break;
+		case GridOption::Foliage:
+		{
+			// If none match don't spawn anything
+			float randNum = FMath::RandRange(0.0, 1.0);
+
+			TArray<FName> rowNames = foliageData->GetRowNames();
+
+			for (FName rowName : rowNames)
+			{
+				FFoliageSpawnData* rowData = foliageData->FindRow<FFoliageSpawnData>(rowName, "");
+				if (randNum > rowData->min && randNum < rowData->max)
+				{
+					// This is the row we are using
+					grid[x][y]->selectedMesh = rowData->mesh;
+				}
+			}
+
+			break;
+		}
 	}
 
 	grid[x][y]->rootLocation = true;
@@ -493,8 +539,8 @@ void AProceduralFoliageGenerator::SpawnGrid()
 	// Get extent of landscape or whatever volume or actor is being used to determine the grid
 	FVector origin = GetActorLocation();
 
-	UE_LOG(LogTemp, Warning, TEXT("volume extent x: %d, y: %d"), boxExtent.X, boxExtent.Y);
-	UE_LOG(LogTemp, Warning, TEXT("origin x: %d, y: %d"), origin.X, origin.Y);
+	//UE_LOG(LogTemp, Warning, TEXT("volume extent x: %d, y: %d"), boxExtent.X, boxExtent.Y);
+	//UE_LOG(LogTemp, Warning, TEXT("origin x: %d, y: %d"), origin.X, origin.Y);
 
 	for (int x = 0; x < numOfXCells; x++)
 	{
@@ -519,7 +565,7 @@ void AProceduralFoliageGenerator::SpawnGrid()
 			FVector startLoc(spawnX, spawnY, origin.Z + boxExtent.Z);
 			FVector endLoc(spawnX, spawnY, (origin.Z + boxExtent.Z) - 100000);
 
-			UE_LOG(LogTemp, Warning, TEXT("spawn grid x: %d grid y: %d spawn x: %d, spawn y: %d"), x, y, spawnX, spawnY);
+			//UE_LOG(LogTemp, Warning, TEXT("spawn grid x: %d grid y: %d spawn x: %d, spawn y: %d"), x, y, spawnX, spawnY);
 			GetWorld()->LineTraceSingleByChannel(hit, startLoc, endLoc, ECollisionChannel::ECC_WorldStatic);
 			//DrawDebugLine(GetWorld(), startLoc, endLoc, hit.bBlockingHit ? FColor::Blue : FColor::Red, true, -1, 0, 3.0);
 
@@ -576,11 +622,11 @@ void AProceduralFoliageGenerator::SpawnGrid()
 						if (orbSpawnedCounter < numOfOrbsToSpawn)
 						{
 							// Spawn orb
-							AOrb* orb = GetWorld()->SpawnActor<AOrb>(hit.Location, FRotator());
+							AOrb* orb = GetWorld()->SpawnActor<AOrb>(orbClass, hit.Location, FRotator());
 							if (orb)
 							{
 								// Teleporter is first item spawned so we can bind teleporter to orb function
-								orb->orbGrabbedDelegate.AddUFunction(this, "ForwardOrbCollected");
+								//orb->orbGrabbedDelegate.AddUFunction(this, "ForwardOrbCollected");
 								orb->setMesh(orbMesh);
 								orb->SetTimelineCurve(orbMovementCurve);
 								orb->Start();
@@ -591,7 +637,7 @@ void AProceduralFoliageGenerator::SpawnGrid()
 						else if(!enemy)
 						{
 							// Need to adjust the Z for spawning of the Enemy
-							enemy = GetWorld()->SpawnActor<ACharacter>(enemyClass, FVector(hit.Location.X, hit.Location.Y, 1000), FRotator());
+							enemy = GetWorld()->SpawnActor<ACharacter>(enemyClass, FVector(hit.Location.X, hit.Location.Y, 500), FRotator());
 						}
 						break;
 					}
@@ -617,6 +663,7 @@ void AProceduralFoliageGenerator::SpawnGrid()
 
 void AProceduralFoliageGenerator::ForwardOrbCollected()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Orb Collected"));
 	teleporter->OrbCollected();
 }
 

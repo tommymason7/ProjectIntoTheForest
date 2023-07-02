@@ -26,11 +26,15 @@ void ATeleporter::OrbCollected()
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Orb Collected")));
 	numCollected++;
 
+	UE_LOG(LogTemp, Warning, TEXT("Num Collected: %d num spawned: %d percentage: %f percentageNeeded: %f"), numCollected, numSpawned, float(numCollected) / float(numSpawned), percentageNeeded);
+
 	// If the player has collected enough orbs, change the material
-	if (numCollected / numSpawned >= percentageNeeded)
+	if (float(numCollected) / float(numSpawned) >= percentageNeeded)
 	{
 		int32 matIndex = meshComponent->GetStaticMesh()->GetMaterialIndexFromImportedMaterialSlotName(materialSlotToChange);
 		meshComponent->SetMaterial(matIndex, activeMat);
+
+		UE_LOG(LogTemp, Warning, TEXT("Setting mesh material for mat index: %d"), matIndex);
 
 		// Turn on collision
 		Box->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -73,4 +77,9 @@ void ATeleporter::setMesh(UStaticMesh* newMesh)
 	Super::setMesh(newMesh);
 
 	Box->SetBoxExtent(meshComponent->GetStaticMesh()->GetBounds().BoxExtent + FVector(50, 0, 50), true);
+}
+
+void ATeleporter::SetTeleportDelegate(const FPlayerOverlapped& delegate)
+{
+	teleportDelegate = delegate;
 }

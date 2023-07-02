@@ -18,7 +18,7 @@ public:
 	// Sets default values for this actor's properties
 	AStartingManager();
 
-	UFUNCTION(BlueprintImplementableEvent)
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void DeleteLoadingScreen();
 
 protected:

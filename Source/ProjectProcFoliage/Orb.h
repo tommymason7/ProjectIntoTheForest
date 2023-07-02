@@ -6,11 +6,12 @@
 #include "InteractableParent.h"
 
 #include "Components/TimelineComponent.h"
-#include "Particles/ParticleSystemComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 
 #include "Orb.generated.h"
 
-DECLARE_MULTICAST_DELEGATE(FOrbGrabbed)
+DECLARE_DYNAMIC_DELEGATE(FOrbGrabbed);
 
 /**
  * 
@@ -21,14 +22,15 @@ class PROJECTPROCFOLIAGE_API AOrb : public AInteractableParent
 	GENERATED_BODY()
 
 	UPROPERTY()
-	UParticleSystemComponent* particleSystem = nullptr;
-
-	UPROPERTY()
 	FTimeline floatingMovementTimeline;
 
 	FOnTimelineFloat floatingTimelineCallback;
 
+	UPROPERTY()
 	UCurveFloat* timelineCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Particles, meta = (AllowPrivateAccess = "true"))
+	UNiagaraSystem* NiagaraSystem;
 
 	FVector originalLocation;
 
@@ -40,9 +42,14 @@ class PROJECTPROCFOLIAGE_API AOrb : public AInteractableParent
 public:
 	AOrb();
 
+	UFUNCTION(BlueprintCallable)
 	void SetTimelineCurve(UCurveFloat* newTimelineCurve);
 
+	UFUNCTION(BlueprintCallable)
 	void Start();
+
+	UFUNCTION(BlueprintCallable)
+	void SetOrbCollectionDelegate(const FOrbGrabbed& delegate);
 
 	FOrbGrabbed orbGrabbedDelegate;
 
