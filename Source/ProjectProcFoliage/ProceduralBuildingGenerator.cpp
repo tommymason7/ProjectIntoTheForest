@@ -6,11 +6,41 @@
 AProceduralBuildingGenerator::AProceduralBuildingGenerator()
 {
 	floorComponent = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("Floors"));
+
+	_volume = CreateDefaultSubobject<UBoxComponent>(TEXT("Volume"));
+	_volume->SetupAttachment(RootComponent);
 }
 
 void AProceduralBuildingGenerator::BeginPlay()
 {
-	
+	Super::BeginPlay();
+
+	Tags.Add("Building");
+}
+
+void AProceduralBuildingGenerator::initialize()
+{
+	// Create floor component
+	floorComponent = NewObject<UInstancedStaticMeshComponent>(this);
+	floorComponent->RegisterComponent();
+
+	floorComponent->SetStaticMesh(floorOption);
+
+	AddInstanceComponent(floorComponent);
+
+	// Create Door component
+	doorComponent = NewObject<UInstancedStaticMeshComponent>(this);
+	doorComponent->RegisterComponent();
+	doorComponent->SetStaticMesh(doorOption);
+
+	AddInstanceComponent(doorComponent);
+
+	// Create Wall component
+	wallComponent = NewObject<UInstancedStaticMeshComponent>(this);
+	wallComponent->RegisterComponent();
+	wallComponent->SetStaticMesh(wallOption);
+
+	AddInstanceComponent(wallComponent);
 
 	// Initial fill in Grid array
 	for (int x = 0; x < numOfXCells; x++)
@@ -19,7 +49,7 @@ void AProceduralBuildingGenerator::BeginPlay()
 		for (int y = 0; y < numOfYCells; y++)
 		{
 			TSharedPtr<GridInfo> gridCell = MakeShared<GridInfo>();
-			
+
 			gridCell->walls.Add(Direction::BOTTOM, MakeShared<SubGridInfo>());
 			gridCell->walls.Add(Direction::TOP, MakeShared<SubGridInfo>());
 			gridCell->walls.Add(Direction::RIGHT, MakeShared<SubGridInfo>());
@@ -29,15 +59,13 @@ void AProceduralBuildingGenerator::BeginPlay()
 		}
 		grid.Add(inner);
 	}
+	UE_LOG(LogTemp, Warning, TEXT("Generate about to be called in initalize. numofXCells: %d numofYCells: %d"), numOfXCells, numOfYCells);
 
 	Generate();
 }
 
 void AProceduralBuildingGenerator::Generate()
 {
-	//int x;
-	//int y;
-
 	// Generating the rooms/hallways
 
 	// ASSUMPTION: There is only one entry/exit for every building
@@ -114,56 +142,141 @@ void AProceduralBuildingGenerator::Generate()
 		{
 			if (x == doorX && y == doorY)
 			{
+				// Detect if it's a corner slot
+
+				// TODO: Breaks for 1x1 buildings
+
+				// Bottom Left Corner
+				if (x == 0 && y == 0)
+				{
+					if (dir == Direction::LEFT)
+					{
+						grid[x][y]->walls[Direction::BOTTOM]->type.RemoveAll([](MeshType opt) {
+							return opt != MeshType::WALL;
+						});
+						grid[x][y]->walls[Direction::BOTTOM]->offset.X = 0;
+						grid[x][x]->walls[Direction::BOTTOM]->zRotation = 90;
+					}
+					else if (dir == Direction::BOTTOM)
+					{
+						grid[x][y]->walls[Direction::LEFT]->type.RemoveAll([](MeshType opt) {
+							return opt != MeshType::WALL;
+							});
+						grid[x][y]->walls[Direction::LEFT]->offset.Y = 0;
+						grid[x][x]->walls[Direction::LEFT]->zRotation = 0;
+					}
+				}
+				// Top Left Corner
+				else if (x == numOfXCells - 1 && y == 0)
+				{
+					if (dir == Direction::LEFT)
+					{
+						grid[x][y]->walls[Direction::TOP]->type.RemoveAll([](MeshType opt) {
+							return opt != MeshType::WALL;
+						});
+						grid[x][y]->walls[Direction::TOP]->offset.X = 400;
+						grid[x][y]->walls[Direction::TOP]->zRotation = 90;
+					}
+					else if (dir == Direction::TOP)
+					{
+						grid[x][y]->walls[Direction::LEFT]->type.RemoveAll([](MeshType opt) {
+							return opt != MeshType::WALL;
+							});
+						grid[x][y]->walls[Direction::LEFT]->offset.Y = 0;
+						grid[x][x]->walls[Direction::LEFT]->zRotation = 0;
+					}
+
+				}
+				// Bottom Right Corner
+				else if (x == 0 && y == numOfYCells - 1)
+				{
+					if (dir == Direction::RIGHT)
+					{
+						grid[x][y]->walls[Direction::BOTTOM]->type.RemoveAll([](MeshType opt) {
+							return opt != MeshType::WALL;
+						});
+						grid[x][y]->walls[Direction::BOTTOM]->offset.X = 0;
+						grid[x][x]->walls[Direction::BOTTOM]->zRotation = 90;
+					}
+					else if(dir == Direction::BOTTOM)
+					{
+						grid[x][y]->walls[Direction::RIGHT]->type.RemoveAll([](MeshType opt) {
+							return opt != MeshType::WALL;
+						});
+						grid[x][y]->walls[Direction::RIGHT]->offset.Y = 400;
+						grid[x][x]->walls[Direction::RIGHT]->zRotation = 0;
+					}
+				}
+				// Top Right Corner
+				else if (x == numOfXCells - 1 && y == numOfYCells - 1)
+				{
+					if (dir == Direction::RIGHT)
+					{
+						grid[x][y]->walls[Direction::TOP]->type.RemoveAll([](MeshType opt) {
+							return opt != MeshType::WALL;
+						});
+						grid[x][y]->walls[Direction::TOP]->offset.X = 400;
+						grid[x][x]->walls[Direction::TOP]->zRotation = 90;
+					}
+					else if (dir == Direction::TOP)
+					{
+						grid[x][y]->walls[Direction::RIGHT]->type.RemoveAll([](MeshType opt) {
+							return opt != MeshType::WALL;
+						});
+						grid[x][y]->walls[Direction::RIGHT]->offset.Y = 400;
+						grid[x][x]->walls[Direction::RIGHT]->zRotation = 0;
+					}
+				}
 				continue;
 			}
 
-			// Bottom non corners
+			// Left non corners
 			if (x != 0 && x != numOfXCells - 1 && y == 0)
 			{
-				grid[x][0]->walls[Direction::BOTTOM]->type.RemoveAll([](MeshType opt) {
+				grid[x][0]->walls[Direction::LEFT]->type.RemoveAll([](MeshType opt) {
 					return opt != MeshType::WALL;
 				});
 
-				grid[x][0]->walls[Direction::BOTTOM]->offset.X = 0;
-				grid[x][0]->walls[Direction::BOTTOM]->zRotation = 90;
-
-				UE_LOG(LogTemp, Warning, TEXT("BOTTOM NON CORNER x: %d y: %d"), x, y);
-			}
-			// Top non corners
-			else if (x != 0 && x != numOfXCells - 1 && y == numOfYCells - 1)
-			{
-				grid[x][numOfYCells - 1]->walls[Direction::TOP]->type.RemoveAll([](MeshType opt) {
-					return opt != MeshType::WALL;
-				});
-
-				grid[x][numOfYCells - 1]->walls[Direction::TOP]->offset.X = 400;
-				grid[x][numOfYCells - 1]->walls[Direction::TOP]->zRotation = 90;
-
-				UE_LOG(LogTemp, Warning, TEXT("TOP NON CORNER x: %d y: %d"), x, y);
-			}
-			// Left non corners
-			else if (y != 0 && y != numOfYCells - 1 && x == 0)
-			{
-				grid[0][y]->walls[Direction::LEFT]->type.RemoveAll([](MeshType opt) {
-					return opt != MeshType::WALL;
-				});
-
-				grid[0][y]->walls[Direction::LEFT]->offset.Y = 0;
-				grid[0][y]->walls[Direction::LEFT]->zRotation = 0;
+				grid[x][0]->walls[Direction::LEFT]->offset.Y = 0;
+				grid[x][0]->walls[Direction::LEFT]->zRotation = 0;
 
 				UE_LOG(LogTemp, Warning, TEXT("LEFT NON CORNER x: %d y: %d"), x, y);
 			}
 			// Right non corners
-			else if (y != 0 && y != numOfYCells - 1 && x == numOfXCells - 1)
+			else if (x != 0 && x != numOfXCells - 1 && y == numOfYCells - 1)
 			{
-				grid[numOfXCells - 1][y]->walls[Direction::RIGHT]->type.RemoveAll([](MeshType opt) {
+				grid[x][numOfYCells - 1]->walls[Direction::RIGHT]->type.RemoveAll([](MeshType opt) {
 					return opt != MeshType::WALL;
 				});
 
-				grid[numOfXCells - 1][y]->walls[Direction::RIGHT]->offset.Y = 400;
-				grid[numOfXCells - 1][y]->walls[Direction::RIGHT]->zRotation = 0;
+				grid[x][numOfYCells - 1]->walls[Direction::RIGHT]->offset.Y = 400;
+				grid[x][numOfYCells - 1]->walls[Direction::RIGHT]->zRotation = 0;
 
 				UE_LOG(LogTemp, Warning, TEXT("RIGHT NON CORNER x: %d y: %d"), x, y);
+			}
+			// Bottom non corners
+			else if (y != 0 && y != numOfYCells - 1 && x == 0)
+			{
+				grid[0][y]->walls[Direction::BOTTOM]->type.RemoveAll([](MeshType opt) {
+					return opt != MeshType::WALL;
+				});
+
+				grid[0][y]->walls[Direction::BOTTOM]->offset.X = 0;
+				grid[0][y]->walls[Direction::BOTTOM]->zRotation = 90;
+
+				UE_LOG(LogTemp, Warning, TEXT("BOTTOM NON CORNER x: %d y: %d"), x, y);
+			}
+			// Top non corners
+			else if (y != 0 && y != numOfYCells - 1 && x == numOfXCells - 1)
+			{
+				grid[numOfXCells - 1][y]->walls[Direction::TOP]->type.RemoveAll([](MeshType opt) {
+					return opt != MeshType::WALL;
+				});
+
+				grid[numOfXCells - 1][y]->walls[Direction::TOP]->offset.X = 400;
+				grid[numOfXCells - 1][y]->walls[Direction::TOP]->zRotation = 90;
+
+				UE_LOG(LogTemp, Warning, TEXT("TOP NON CORNER x: %d y: %d"), x, y);
 			}
 			// Bottom Left Corner
 			else if (x == 0 && y == 0)
@@ -184,28 +297,8 @@ void AProceduralBuildingGenerator::Generate()
 
 				UE_LOG(LogTemp, Warning, TEXT("BOTTOM LEFT CORNER x: %d y: %d"), x, y);
 			}
-			// Bottom Right Corner
-			else if (x == numOfXCells - 1 && y == 0)
-			{
-				grid[x][y]->walls[Direction::RIGHT]->type.RemoveAll([](MeshType opt) {
-					return opt != MeshType::WALL;
-				});
-
-				grid[x][y]->walls[Direction::RIGHT]->offset.Y = 400;
-				grid[x][y]->walls[Direction::RIGHT]->zRotation = 0;
-
-
-				grid[x][y]->walls[Direction::BOTTOM]->type.RemoveAll([](MeshType opt) {
-					return opt != MeshType::WALL;
-				});
-
-				grid[x][y]->walls[Direction::BOTTOM]->offset.X = 0;
-				grid[x][y]->walls[Direction::BOTTOM]->zRotation = 90;
-
-				UE_LOG(LogTemp, Warning, TEXT("BOTTOM RIGHT CORNER x: %d y: %d"), x, y);
-			}
 			// Top Left Corner
-			else if (x == 0 && y == numOfYCells - 1)
+			else if (x == numOfXCells - 1 && y == 0)
 			{
 				grid[x][y]->walls[Direction::LEFT]->type.RemoveAll([](MeshType opt) {
 					return opt != MeshType::WALL;
@@ -213,6 +306,7 @@ void AProceduralBuildingGenerator::Generate()
 
 				grid[x][y]->walls[Direction::LEFT]->offset.Y = 0;
 				grid[x][y]->walls[Direction::LEFT]->zRotation = 0;
+
 
 				grid[x][y]->walls[Direction::TOP]->type.RemoveAll([](MeshType opt) {
 					return opt != MeshType::WALL;
@@ -222,6 +316,25 @@ void AProceduralBuildingGenerator::Generate()
 				grid[x][y]->walls[Direction::TOP]->zRotation = 90;
 
 				UE_LOG(LogTemp, Warning, TEXT("TOP LEFT CORNER x: %d y: %d"), x, y);
+			}
+			// Bottom Right Corner
+			else if (x == 0 && y == numOfYCells - 1)
+			{
+				grid[x][y]->walls[Direction::RIGHT]->type.RemoveAll([](MeshType opt) {
+					return opt != MeshType::WALL;
+				});
+
+				grid[x][y]->walls[Direction::RIGHT]->offset.Y = 400;
+				grid[x][y]->walls[Direction::RIGHT]->zRotation = 0;
+
+				grid[x][y]->walls[Direction::BOTTOM]->type.RemoveAll([](MeshType opt) {
+					return opt != MeshType::WALL;
+				});
+
+				grid[x][y]->walls[Direction::BOTTOM]->offset.X = 0;
+				grid[x][y]->walls[Direction::BOTTOM]->zRotation = 90;
+
+				UE_LOG(LogTemp, Warning, TEXT("BOTTOM RIGHT CORNER x: %d y: %d"), x, y);
 			}
 			// Top Right Corner
 			else if (x == numOfXCells - 1 && y == numOfYCells - 1)
@@ -269,6 +382,29 @@ void AProceduralBuildingGenerator::Generate()
 	GenerateBuilding();
 
 	SpawnBuilding();
+
+
+	/////////////////////////////////////////////////////////////////////////////////
+	// Attempt to spawn exclusion zone around building for PCG
+	// Spawn Exclusion Zone around Building?
+	/////////////////////////////////////////////////////////////////////////////////
+	//auto actorLocation = GetActorLocation();
+	//UE_LOG(LogTemp, Warning, TEXT("ActorLocation x: %f y: %f"), actorLocation.X, actorLocation.Y);
+	//auto exclusionZone = GetWorld()->SpawnActor<AStaticMeshActor>(FVector(actorLocation.X + (numOfXCells/2) * 400, actorLocation.Y + (numOfYCells/2) * 400, actorLocation.Z), FRotator(0, 0, 0));
+	//if (exclusionZone)
+	//{
+	//	exclusionZone->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+	//	exclusionZone->GetStaticMeshComponent()->SetStaticMesh(exclusionObject);
+	//	exclusionZone->Tags.Add("Exclusion");
+
+	//	exclusionZone->SetActorScale3D(FVector(numOfYCells, numOfXCells, 1));
+	//}
+	/////////////////////////////////////////////////////////////////////////////////
+
+	generationFinishedCallback.ExecuteIfBound();
+
+	generationFinished = true;
+
 }
 
 // Only called after the entrance to the building is set
@@ -479,21 +615,25 @@ void AProceduralBuildingGenerator::SpawnWallDoor(int x, int y, Direction dir, TS
 		{
 			case MeshType::DOORWAY:
 			{
-				AStaticMeshActor* spawned = GetWorld()->SpawnActor<AStaticMeshActor>(spawnLocation, FRotator(0, info->zRotation, 0));
+				doorComponent->AddInstance(FTransform(FRotator(0, info->zRotation, 0), spawnLocation));
+				/*AStaticMeshActor* spawned = GetWorld()->SpawnActor<AStaticMeshActor>(spawnLocation, FRotator(0, info->zRotation, 0));
 				if (spawned)
 				{
 					spawned->GetStaticMeshComponent()->SetStaticMesh(doorOption);
-				}
+					spawned->Tags.AddUnique("Building");
+				}*/
 
 				break;
 			}
 			case MeshType::WALL:
 			{
-				AStaticMeshActor* spawned = GetWorld()->SpawnActor<AStaticMeshActor>(spawnLocation, FRotator(0, info->zRotation, 0));
+				wallComponent->AddInstance(FTransform(FRotator(0, info->zRotation, 0), spawnLocation));
+				/*AStaticMeshActor* spawned = GetWorld()->SpawnActor<AStaticMeshActor>(spawnLocation, FRotator(0, info->zRotation, 0));
 				if (spawned)
 				{
 					spawned->GetStaticMeshComponent()->SetStaticMesh(wallOption);
-				}
+					spawned->Tags.AddUnique("Building");
+				}*/
 				break;
 			}
 			case MeshType::NONE:
@@ -559,4 +699,55 @@ bool AProceduralBuildingGenerator::IsGridFilled()
 	}
 
 	return true;
+}
+
+void AProceduralBuildingGenerator::setNumOfXCells(int xCells)
+{
+	numOfXCells = xCells;
+}
+
+void AProceduralBuildingGenerator::setNumOfYCells(int yCells)
+{
+	numOfYCells = yCells;
+}
+
+void AProceduralBuildingGenerator::setWallOption(UStaticMesh* option)
+{
+	wallOption = option;
+}
+
+void AProceduralBuildingGenerator::setDoorOption(UStaticMesh* option)
+{
+	doorOption = option;
+}
+
+void AProceduralBuildingGenerator::setFloorOption(UStaticMesh* option)
+{
+	floorOption = option;
+}
+
+float AProceduralBuildingGenerator::getBuildingMinX()
+{
+	return floorComponent->GetComponentLocation().X;
+}
+
+float AProceduralBuildingGenerator::getBuildingMaxX()
+{
+	// Getting the location of the original floor component. Adding the number of X Cells (represented by rows) * size of the floor component. Then adding the offset of X to shift the value to the edge of the floor
+	return floorComponent->GetComponentLocation().X + (numOfXCells * 400) + grid[numOfXCells][0]->walls[Direction::TOP]->offset.X;
+}
+
+float AProceduralBuildingGenerator::getBuildingMinY()
+{
+	return floorComponent->GetComponentLocation().Y;
+}
+
+float AProceduralBuildingGenerator::getBuildingMaxY()
+{
+	return floorComponent->GetComponentLocation().Y + (numOfYCells * 400) + grid[0][numOfYCells]->walls[Direction::RIGHT]->offset.Y;
+}
+
+bool AProceduralBuildingGenerator::isGenerationFinished()
+{
+	return generationFinished;
 }

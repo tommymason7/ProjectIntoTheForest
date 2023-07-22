@@ -15,6 +15,7 @@
 #include "StartingManager.h"
 #include "Teleporter.h"
 #include "DataTableStructs.h"
+#include "ProceduralBuildingGenerator.h"
 
 #include "ProceduralFoliageGenerator.generated.h"
 
@@ -128,6 +129,8 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 	int numOfOrbsCollectedThisLevel = 0;
 	int orbSpawnedCounter = 0;
 
+	AProceduralBuildingGenerator* buildingGenerator = nullptr;
+
 	
 public:	
 	// Sets default values for this actor's properties
@@ -162,4 +165,7 @@ private:
 	GridOption getOptionFromChance(float randNum);
 
 	UStaticMesh* getArchitectureFromChance(float randNum);
+
+	UFUNCTION()
+	void setupForGeneration();
 };

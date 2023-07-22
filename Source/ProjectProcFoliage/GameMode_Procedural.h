@@ -9,6 +9,8 @@
 
 #include "GameMode_Procedural.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAllBuildingsGenerated);
+
 /**
  * 
  */
@@ -28,4 +30,8 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void DeleteLoadingScreen();
+
+    UPROPERTY(BlueprintCallable)
+	FAllBuildingsGenerated buildingsGeneratedDelegate;
+
 };

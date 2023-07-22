@@ -16,7 +16,10 @@ struct FSpawnRange
 {
 	GENERATED_USTRUCT_BODY()
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float min;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float max;
 };
 
@@ -60,7 +63,13 @@ public:
 	UMaterialInstance* TeleporterActiveMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TMap<ACharacter*, FSpawnRange> enemyToSpawnRange;
+	TMap<TSubclassOf<class ACharacter>, FSpawnRange> enemyToSpawnRange;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int maxBuildingXSize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int maxBuildingYSize;
 };
 
 USTRUCT(BlueprintType)

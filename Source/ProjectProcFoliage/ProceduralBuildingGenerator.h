@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMeshActor.h"
 
@@ -27,6 +28,8 @@ enum MeshType
 	NONE
 };
 
+DECLARE_DELEGATE(FBuildingGenerationFinished);
+
 /**
  * 
  */
@@ -34,6 +37,20 @@ UCLASS()
 class PROJECTPROCFOLIAGE_API AProceduralBuildingGenerator : public AActor
 {
 	GENERATED_BODY()
+
+	struct RoomInfo
+	{
+		int xMin;
+		int xMax;
+		int yMin;
+		int yMax;
+
+		// Door ways
+		TSet<TTuple<int, int>> doorwayCoordinates;
+		TMap<TTuple<int, int>, TSharedPtr<RoomInfo>> roomConnections;
+
+		// Track Story elements that are spawned in to prevent duplicate spawns
+	};
 
 	struct SubGridInfo
 	{
@@ -45,15 +62,11 @@ class PROJECTPROCFOLIAGE_API AProceduralBuildingGenerator : public AActor
 
 	struct GridInfo
 	{
-		// Need to store at least 3 options for a basic room
-		// TODO need to assoicate the 4 wall locations with a wall option
-		//  Aka. Left right top down need to know if there is a wall there or not. This is going to be determined by how big the room is
+		// Walls per grid info
 		TMap<Direction, TSharedPtr<SubGridInfo>> walls;
-
-		// I don't think this is really should just be a repeat of whats in walls
-		//TArray<SubGridInfo> doorWays;
 		
-		// Info for subgrid of grid
+		// Room that grid is apart of
+		TSharedPtr<RoomInfo> room;
 	};
 
 public:
@@ -61,6 +74,33 @@ public:
 
 	void Generate();
 	void Spawn();
+
+	UFUNCTION(BlueprintCallable)
+	void setNumOfXCells(int xCells);
+
+	UFUNCTION(BlueprintCallable)
+	void setNumOfYCells(int yCells);
+
+	UFUNCTION(BlueprintCallable)
+    void initialize();
+
+	UFUNCTION(BlueprintCallable)
+	void setWallOption(UStaticMesh* option);
+
+	UFUNCTION(BlueprintCallable)
+	void setDoorOption(UStaticMesh* option);
+
+	UFUNCTION(BlueprintCallable)
+	void setFloorOption(UStaticMesh* option);
+
+	float getBuildingMinX();
+	float getBuildingMaxX();
+	float getBuildingMinY();
+	float getBuildingMaxY();
+
+	FBuildingGenerationFinished generationFinishedCallback;
+
+	bool isGenerationFinished();
 
 protected:
 
@@ -80,15 +120,20 @@ private:
 	// We could actually have the size of the cells vary based on the mesh selected but more details would have to be known at generation
 	TArray<TArray<TSharedPtr<GridInfo>>> grid;
 
+	TArray<RoomInfo> rooms;
+
 	TArray<TPair<int, int>> _gridGenerationQueue;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Cells, meta = (AllowPrivateAccess = "true"))
-	int numOfXCells;
+	int numOfXCells = 2;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Cells , meta = (AllowPrivateAccess = "true"))
-	int numOfYCells;
+	int numOfYCells = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	UInstancedStaticMeshComponent* floorComponent = nullptr;
+
+	UInstancedStaticMeshComponent* wallComponent = nullptr;
+	UInstancedStaticMeshComponent* doorComponent = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ArchitectureOptions, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* wallOption = nullptr;
@@ -96,7 +141,17 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ArchitectureOptions, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* doorOption = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ArchitectureOptions, meta = (AllowPrivateAccess = "true"))
+	UStaticMesh* floorOption = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ArchitectureOptions, meta = (AllowPrivateAccess = "true"))
+	UStaticMesh* exclusionObject = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
+	UBoxComponent* _volume = nullptr;
+
 	int xCellsSubgrid;
 	int yCellsSubgrid;
 
+	bool generationFinished = false;
 };

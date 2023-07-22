@@ -61,7 +61,6 @@ void AProceduralFoliageGenerator::BeginPlay()
 		grid.Add(inner);
 	}
 
-	// Change to Volume when moved to an actor
 	if (_volume)
 	{
 		boxExtent = _volume->GetLocalBounds().BoxExtent;
@@ -73,9 +72,25 @@ void AProceduralFoliageGenerator::BeginPlay()
 		ySeperationAmnt = extent.Y / numOfYCells;
 	}
 
-	GenerateTerrainGrid(true);
+	AGameModeBase* mode = UGameplayStatics::GetGameMode(GetWorld());
+	AGameMode_Procedural* castedMode = Cast<AGameMode_Procedural>(mode);
 
-	SpawnGrid();
+	if (castedMode)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Game Mode Valid"));
+		castedMode->buildingsGeneratedDelegate.AddDynamic(this, &AProceduralFoliageGenerator::setupForGeneration);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Game Mode NOT Valid"));
+	}
+	
+
+
+	// TODO: Move to a on reception of building finished generating event
+	//GenerateTerrainGrid(true);
+
+	//SpawnGrid();
 	
 }
 
@@ -86,6 +101,61 @@ void AProceduralFoliageGenerator::Tick(float DeltaTime)
 
 }
 
+void AProceduralFoliageGenerator::setupForGeneration()
+{
+	UE_LOG(LogTemp, Warning, TEXT("SETUP FOR GENERATION -----------------"));
+	AActor* foundGenerator = UGameplayStatics::GetActorOfClass(GetWorld(), AProceduralBuildingGenerator::StaticClass());
+	buildingGenerator = Cast<AProceduralBuildingGenerator>(foundGenerator);
+
+	if (buildingGenerator)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Building generator Found!"));
+
+		// Get max X, max Y, min X, min Y to fill in grid here
+		float minX = buildingGenerator->getBuildingMinX();
+		float maxX = buildingGenerator->getBuildingMaxX();
+		float minY = buildingGenerator->getBuildingMinY();
+		float maxY = buildingGenerator->getBuildingMaxY();
+
+		// Fill in grid 
+		/*FVector volumeLoc = _volume->GetComponentLocation();
+		FVector extent = _volume->GetLocalBounds().BoxExtent;
+
+		// Should be bottom left location at this point
+		volumeLoc = FVector(volumeLoc.X - extent.X, volumeLoc.Y - extent.Y, volumeLoc.Z);
+		float foliageMinX = GetActorLocation().X - boxExtent.X;
+		float foliageMinY = GetActorLocation().Y - boxExtent.Y;
+		float folaigeMaxX = GetActorLocation().X - boxExtent.X + (numOfXCells * xSeperationAmnt);
+		float folaigeMaxY = GetActorLocation().Y - boxExtent.Y + (numOfYCells * ySeperationAmnt);*/
+
+
+		int startingX = minX / xSeperationAmnt;
+		int startingY = minY / ySeperationAmnt;
+		int endingX = maxX / xSeperationAmnt;
+		int endingY = maxY / ySeperationAmnt;
+
+		for (int x = startingX; x <= endingX; x++)
+		{
+			for (int y = startingY; y <= endingY; y++)
+			{
+				// Remove all non selected options
+				grid[x][y]->possibilities.RemoveAll([](GridOption opt) {
+					// Removes all entries that meet this condition
+					return opt != GridOption::Architecture;
+				});
+			}
+		}
+
+		GenerateTerrainGrid(true);
+
+		SpawnGrid();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Building generator NOT found!"));
+	}
+}
+
 void AProceduralFoliageGenerator::GenerateTerrainGrid(bool initialPick)
 {
 	int x;
@@ -94,9 +164,20 @@ void AProceduralFoliageGenerator::GenerateTerrainGrid(bool initialPick)
 	// Pick an initial point to start with
 	if (initialPick)
 	{
-		// Random index into the array
-		x = FMath::RandRange(0, numOfXCells - 1);
-		y = FMath::RandRange(0, numOfYCells - 1);
+		bool needsLoc = true;
+		while (needsLoc)
+		{
+			// Random index into the array
+			x = FMath::RandRange(0, numOfXCells - 1);
+			y = FMath::RandRange(0, numOfYCells - 1);
+
+			//Ensure that this is not a location for the building
+			// Ensure the grid isn't filled. Shouldn't ever be but this ensure we won't get in an infinite loop in theory
+			if (grid[x][y]->possibilities.Num() > 1 || IsGridFilled())
+			{
+				needsLoc = false;
+			}
+		}
 
 		// Spawning teleporter
 		GridOption option = GridOption::Architecture;
