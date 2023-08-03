@@ -7,6 +7,8 @@
 #include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 #include "Components/BoxComponent.h"
 #include "Engine/DataTable.h"
+#include "Engine/TextRenderActor.h"
+#include "Components/TextRenderComponent.h"
 
 #include "FoliageInstance.h"
 #include "GameMode_Procedural.h"
@@ -51,8 +53,6 @@ class PROJECTPROCFOLIAGE_API AProceduralFoliageGenerator : public AActor
 		bool rootLocation = false;
 		bool initialPick = false;
 	};
-
-
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* _volume = nullptr;
@@ -166,6 +166,6 @@ private:
 
 	UStaticMesh* getArchitectureFromChance(float randNum);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void setupForGeneration();
 };

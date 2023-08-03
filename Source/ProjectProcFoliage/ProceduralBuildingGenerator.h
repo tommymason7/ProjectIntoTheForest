@@ -7,6 +7,8 @@
 #include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMeshActor.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Landscape.h"
 
 #include "ProceduralBuildingGenerator.generated.h"
 
@@ -28,7 +30,7 @@ enum MeshType
 	NONE
 };
 
-DECLARE_DELEGATE(FBuildingGenerationFinished);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBuildingGenerationFinished);
 
 /**
  * 
@@ -45,8 +47,10 @@ class PROJECTPROCFOLIAGE_API AProceduralBuildingGenerator : public AActor
 		int yMin;
 		int yMax;
 
+		TSet<TPair<int, int>> gridCellsInRoom;
+
 		// Door ways
-		TSet<TTuple<int, int>> doorwayCoordinates;
+		//TSet<TTuple<int, int>> doorwayCoordinates;
 		TMap<TTuple<int, int>, TSharedPtr<RoomInfo>> roomConnections;
 
 		// Track Story elements that are spawned in to prevent duplicate spawns
@@ -98,9 +102,12 @@ public:
 	float getBuildingMinY();
 	float getBuildingMaxY();
 
+	UPROPERTY(BlueprintAssignable)
 	FBuildingGenerationFinished generationFinishedCallback;
 
 	bool isGenerationFinished();
+
+	FVector getOrigin();
 
 protected:
 
@@ -115,14 +122,22 @@ private:
 	void SpawnBuilding();
 	void SpawnWallDoor(int x, int y, Direction dir, TSharedPtr<SubGridInfo> info);
 
+	void GenerateRoomInfo();
+	void RoomDetection(bool initialPick);
+	void RoomInformation(int x, int y, TSharedPtr<RoomInfo> room);
+	bool GetNextCellUnassignedToRoom(TPair<int, int> &pair);
+
+
 	// Each cell is 400x400.
 	// Keep in mind where we are calculating from
 	// We could actually have the size of the cells vary based on the mesh selected but more details would have to be known at generation
 	TArray<TArray<TSharedPtr<GridInfo>>> grid;
 
-	TArray<RoomInfo> rooms;
+	TArray<TSharedPtr<RoomInfo>> rooms;
 
 	TArray<TPair<int, int>> _gridGenerationQueue;
+
+	TSet<TPair<int, int>> _cellsAssignedToARoom;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Cells, meta = (AllowPrivateAccess = "true"))
 	int numOfXCells = 2;
@@ -150,8 +165,16 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	UBoxComponent* _volume = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = LineTrace, meta = (AllowPrivateAccess = "true"))
+	TSet<AActor*> _actorsToIgnoreForLineTrace;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = LineTrace, meta = (AllowPrivateAccess = "true"))
+	float originZOffset = 10;
+
 	int xCellsSubgrid;
 	int yCellsSubgrid;
 
 	bool generationFinished = false;
+
+	FVector origin;
 };
