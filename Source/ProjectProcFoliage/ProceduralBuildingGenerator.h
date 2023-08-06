@@ -137,6 +137,8 @@ private:
 
 	TArray<TPair<int, int>> _gridGenerationQueue;
 
+	TSet<TTuple<int, int, TSharedPtr<RoomInfo>>> _roomAssignmentQueue;
+
 	TSet<TPair<int, int>> _cellsAssignedToARoom;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Cells, meta = (AllowPrivateAccess = "true"))
@@ -144,11 +146,10 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Cells , meta = (AllowPrivateAccess = "true"))
 	int numOfYCells = 2;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	UInstancedStaticMeshComponent* floorComponent = nullptr;
-
 	UInstancedStaticMeshComponent* wallComponent = nullptr;
 	UInstancedStaticMeshComponent* doorComponent = nullptr;
+	UInstancedStaticMeshComponent* ceilingComponent = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ArchitectureOptions, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* wallOption = nullptr;
@@ -158,6 +159,9 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ArchitectureOptions, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* floorOption = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ArchitectureOptions, meta = (AllowPrivateAccess = "true"))
+	UStaticMesh* ceilingOption = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ArchitectureOptions, meta = (AllowPrivateAccess = "true"))
 	UStaticMesh* exclusionObject = nullptr;

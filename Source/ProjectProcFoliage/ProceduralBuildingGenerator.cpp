@@ -42,6 +42,13 @@ void AProceduralBuildingGenerator::initialize()
 
 	AddInstanceComponent(wallComponent);
 
+	// Create Ceiling component
+	ceilingComponent = NewObject<UInstancedStaticMeshComponent>(this);
+	ceilingComponent->RegisterComponent();
+	ceilingComponent->SetStaticMesh(ceilingOption);
+
+	AddInstanceComponent(ceilingComponent);
+
 	// Initial fill in Grid array
 	for (int x = 0; x < numOfXCells; x++)
 	{
@@ -422,7 +429,7 @@ void AProceduralBuildingGenerator::Generate()
 	SpawnBuilding();
 
 	// TODO: Recursive problem
-	//GenerateRoomInfo();
+	GenerateRoomInfo();
 
 	// SpawnItems();
 
@@ -626,10 +633,16 @@ void AProceduralBuildingGenerator::SpawnBuilding()
 		{
 			// TODO: 400 is the assumed size of the mesh, we could just sample the mesh here to get the size.
 			//       The mesh would have top be set as to what is selected further above.
-			FTransform trans(origin + FVector(x*400, y*400, origin.Z));
+			FTransform trans(origin + FVector(x*400, y*400, 0));
+			FTransform ceilingTrans(origin + FVector(x * 400, y * 400, 400));
+
+			UE_LOG(LogTemp, Warning, TEXT("Spawn Building transform z: %f origin z: %f"), trans.GetLocation().Z, origin.Z);
 
 			// Spawn the floor
 			floorComponent->AddInstance(trans);
+
+			// Spawn the ceiling
+			ceilingComponent->AddInstance(ceilingTrans);
 
 			auto bottomInfo = grid[x][y]->walls[Direction::BOTTOM];
 			auto topInfo = grid[x][y]->walls[Direction::TOP];
@@ -654,7 +667,7 @@ void AProceduralBuildingGenerator::SpawnWallDoor(int x, int y, Direction dir, TS
 	if (info->type.Num() == 1)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("origin z: %f"), origin.Z));
-		FVector spawnLocation = origin + FVector(x * 400, y * 400, origin.Z) + info->offset;
+		FVector spawnLocation = origin + FVector(x * 400, y * 400, 0) + info->offset;
 		switch (info->type[0])
 		{
 			case MeshType::DOORWAY:
@@ -840,6 +853,8 @@ void AProceduralBuildingGenerator::RoomInformation(int x, int y, TSharedPtr<Room
 
 	_cellsAssignedToARoom.Add(TTuple<int, int>(x, y));
 
+	_roomAssignmentQueue.Remove(TTuple<int, int, TSharedPtr<RoomInfo>>(x, y, room));
+
 	// Detect if room is complete or not
 	// Should have num of unique x many Left and Right Walls/Doors
 	// Should have num of unique y many Top and Bottom Walls
@@ -900,167 +915,173 @@ void AProceduralBuildingGenerator::RoomInformation(int x, int y, TSharedPtr<Room
 
 		}
 
+
 		// Something To Ponder:
 		// If we start at a corner we could recursively call until we hit each other corner
 
-		// Corners
-		if (pair.Key == 0 && pair.Value == 0)
+		if (!_cellsAssignedToARoom.Contains(TPair<int, int>(pair.Key, pair.Value)))
 		{
-			// Top and Right
-			if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+			// Corners
+			if (pair.Key == 0 && pair.Value == 0)
 			{
-				return RoomInformation(pair.Key + 1, pair.Value, room);
-			}
+				// Top and Right
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					_roomAssignmentQueue.Add(TTuple<int, int, TSharedPtr<RoomInfo>>(pair.Key + 1, pair.Value, room));
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value + 1, room);
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
 			}
-		}
-		else if (pair.Key == 0 && pair.Value == numOfYCells - 1)
-		{
-			// Top and Left
-			if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+			else if (pair.Key == 0 && pair.Value == numOfYCells - 1)
 			{
-				return RoomInformation(pair.Key + 1, pair.Value, room);
-			}
+				// Top and Left
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value - 1, room);
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
 			}
-		}
-		else if (pair.Key == numOfXCells - 1 && pair.Value == 0)
-		{
-			// Bottom and Right
-			if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+			else if (pair.Key == numOfXCells - 1 && pair.Value == 0)
 			{
-				return RoomInformation(pair.Key - 1, pair.Value, room);
-			}
+				// Bottom and Right
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value + 1, room);
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
 			}
-		}
-		else if (pair.Key == numOfXCells - 1 && pair.Value == numOfYCells - 1)
-		{
-			// Bottom and Left
-			if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+			else if (pair.Key == numOfXCells - 1 && pair.Value == numOfYCells - 1)
 			{
-				return RoomInformation(pair.Key - 1, pair.Value, room);
-			}
+				// Bottom and Left
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value - 1, room);
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
 			}
-		}
-		// Min X and Middle Y
-		else if (pair.Key == 0)
-		{
-			// Left, Top and Right
-			if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+			// Min X and Middle Y
+			else if (pair.Key == 0)
 			{
-				return RoomInformation(pair.Key, pair.Value - 1, room);
-			}
+				// Left, Top and Right
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key + 1, pair.Value, room);
-			}
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value + 1, room);
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
 			}
-		}
-		// Max X and Middle Y
-		else if (pair.Key == numOfXCells - 1)
-		{
-			// Left, Bottom, and Right
-			if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+			// Max X and Middle Y
+			else if (pair.Key == numOfXCells - 1)
 			{
-				return RoomInformation(pair.Key, pair.Value - 1, room);
-			}
+				// Left, Bottom, and Right
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key - 1, pair.Value, room);
-			}
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value + 1, room);
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
 			}
-		}
-		// Middle X and Min Y
-		else if (pair.Value == 0)
-		{
-			// Top, Right, and Bottom
-
-			if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+			// Middle X and Min Y
+			else if (pair.Value == 0)
 			{
-				return RoomInformation(pair.Key + 1, pair.Value, room);
-			}
+				// Top, Right, and Bottom
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
+			}
+			// Middle X and Max Y
+			else if (pair.Value == numOfYCells - 1)
 			{
-				return RoomInformation(pair.Key, pair.Value + 1, room);
-			}
+				// Top, Left, and Bottom
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
+			}
+			// All other cells
+			else
 			{
-				return RoomInformation(pair.Key - 1, pair.Value, room);
-			}
-		}
-		// Middle X and Max Y
-		else if (pair.Value == numOfYCells - 1)
-		{
-			// Top, Left, and Bottom
+				// Top, Left, Right, and Bottom
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key + 1, pair.Value, room);
-			}
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value - 1, room);
-			}
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key - 1, pair.Value, room);
-			}
-		}
-		// All other cells
-		else
-		{
-			// Top, Left, Right, and Bottom
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key + 1, pair.Value, room);
-			}
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
 
-			if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value - 1, room);
 			}
-
-			if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key, pair.Value + 1, room);
-			}
-
-			if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
-			{
-				return RoomInformation(pair.Key - 1, pair.Value, room);
-			}
-
 		}
 	}
+
+	// Do we have any items queued?
 }
 
  bool AProceduralBuildingGenerator::GetNextCellUnassignedToRoom(TPair<int, int>& pair)
