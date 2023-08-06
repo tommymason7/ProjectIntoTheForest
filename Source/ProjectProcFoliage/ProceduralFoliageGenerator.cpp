@@ -119,14 +119,14 @@ void AProceduralFoliageGenerator::setupForGeneration()
 
 		// Fill in grid 
 
-		FHitResult t;
-		DrawDebugLine(GetWorld(), FVector(buildingOrigin.X, buildingOrigin.Y, 10000), FVector(buildingOrigin.X, buildingOrigin.Y, -100), t.bBlockingHit ? FColor::Cyan : FColor::Black, true, -1, 0, 50.0);
+		//FHitResult t;
+		//DrawDebugLine(GetWorld(), FVector(buildingOrigin.X, buildingOrigin.Y, 10000), FVector(buildingOrigin.X, buildingOrigin.Y, -100), t.bBlockingHit ? FColor::Cyan : FColor::Black, true, -1, 0, 50.0);
 
-		FHitResult min;
-		DrawDebugLine(GetWorld(), FVector(minX, minY, 10000), FVector(minX, minY, -100), min.bBlockingHit ? FColor::Cyan : FColor::Yellow, true, -1, 0, 50.0);
+		//FHitResult min;
+		//DrawDebugLine(GetWorld(), FVector(minX, minY, 10000), FVector(minX, minY, -100), min.bBlockingHit ? FColor::Cyan : FColor::Yellow, true, -1, 0, 50.0);
 
-		FHitResult max;
-		DrawDebugLine(GetWorld(), FVector(maxX, maxY, 10000), FVector(maxX, maxY, -100), max.bBlockingHit ? FColor::Cyan : FColor::Magenta, true, -1, 0, 50.0);
+		//FHitResult max;
+		//DrawDebugLine(GetWorld(), FVector(maxX, maxY, 10000), FVector(maxX, maxY, -100), max.bBlockingHit ? FColor::Cyan : FColor::Magenta, true, -1, 0, 50.0);
 
 		// Translate Building Coordinates to be in reference to _volumes origin ( ActorLocation - boxExtent.X && ActorLocation - boxExtent.Y)
 		float volumeOriginX = GetActorLocation().X - boxExtent.X;
