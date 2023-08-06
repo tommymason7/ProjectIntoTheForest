@@ -42,6 +42,13 @@ void AProceduralBuildingGenerator::initialize()
 
 	AddInstanceComponent(wallComponent);
 
+	// Create Ceiling component
+	ceilingComponent = NewObject<UInstancedStaticMeshComponent>(this);
+	ceilingComponent->RegisterComponent();
+	ceilingComponent->SetStaticMesh(ceilingOption);
+
+	AddInstanceComponent(ceilingComponent);
+
 	// Initial fill in Grid array
 	for (int x = 0; x < numOfXCells; x++)
 	{
@@ -60,6 +67,42 @@ void AProceduralBuildingGenerator::initialize()
 		grid.Add(inner);
 	}
 	UE_LOG(LogTemp, Warning, TEXT("Generate about to be called in initalize. numofXCells: %d numofYCells: %d"), numOfXCells, numOfYCells);
+
+	// Pick random spot in volume to get origin location
+	if (_volume)
+	{
+		auto o = _volume->Bounds.Origin;
+		auto boxExtent = _volume->Bounds.BoxExtent;
+		FVector randomLoc = UKismetMathLibrary::RandomPointInBoundingBox(o, boxExtent);
+		FVector startingPoint(randomLoc.X, randomLoc.Y, o.Z + boxExtent.Z);
+		FVector endingPoint = startingPoint - FVector(0, 0, o.Z + boxExtent.Z);
+
+		// Line trace to Landscape
+		FHitResult result;
+		FCollisionObjectQueryParams params(ECollisionChannel::ECC_WorldStatic);
+		FCollisionQueryParams colParams;
+		colParams.AddIgnoredActors(_actorsToIgnoreForLineTrace.Array());
+		GetWorld()->LineTraceSingleByObjectType(result, startingPoint, endingPoint, params, colParams);
+		//DrawDebugLine(GetWorld(), startingPoint, endingPoint, FColor::Cyan, true);
+
+		if (result.bBlockingHit)
+		{
+			// Verify that we hit land
+			AActor* actor = result.GetActor();
+			ALandscape* land = Cast<ALandscape>(actor);
+
+			if (land)
+			{
+				origin = result.Location + FVector(0, 0, originZOffset);
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Setting origin z: %f"), origin.Z));
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("HITTING SOMETHING ELSE OTHER THEN LAND: %s"), *actor->GetName()));
+			}
+		}
+
+	}
 
 	Generate();
 }
@@ -125,11 +168,13 @@ void AProceduralBuildingGenerator::Generate()
 		}
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("Outside Door Cell x: %d y: %d with direction: %s" ), doorX, doorY, *UEnum::GetDisplayValueAsText(dir).ToString());
+
+
 	// Set what side of the grid the door is on
-	auto doorIndex = grid[doorX][doorY]->walls.Add(dir, MakeShared<SubGridInfo>());
-	doorIndex->offset = doorOffset;
-	doorIndex->zRotation = rotation;
-	doorIndex->type.RemoveAll([](MeshType opt) {
+	grid[doorX][doorY]->walls[dir]->offset = doorOffset;
+	grid[doorX][doorY]->walls[dir]->zRotation = rotation;
+	grid[doorX][doorY]->walls[dir]->type.RemoveAll([](MeshType opt) {
 		// Removes all entries that meet this condition
 		return opt != MeshType::DOORWAY;
 	});
@@ -155,7 +200,7 @@ void AProceduralBuildingGenerator::Generate()
 							return opt != MeshType::WALL;
 						});
 						grid[x][y]->walls[Direction::BOTTOM]->offset.X = 0;
-						grid[x][x]->walls[Direction::BOTTOM]->zRotation = 90;
+						grid[x][y]->walls[Direction::BOTTOM]->zRotation = 90;
 					}
 					else if (dir == Direction::BOTTOM)
 					{
@@ -163,7 +208,7 @@ void AProceduralBuildingGenerator::Generate()
 							return opt != MeshType::WALL;
 							});
 						grid[x][y]->walls[Direction::LEFT]->offset.Y = 0;
-						grid[x][x]->walls[Direction::LEFT]->zRotation = 0;
+						grid[x][y]->walls[Direction::LEFT]->zRotation = 0;
 					}
 				}
 				// Top Left Corner
@@ -183,7 +228,7 @@ void AProceduralBuildingGenerator::Generate()
 							return opt != MeshType::WALL;
 							});
 						grid[x][y]->walls[Direction::LEFT]->offset.Y = 0;
-						grid[x][x]->walls[Direction::LEFT]->zRotation = 0;
+						grid[x][y]->walls[Direction::LEFT]->zRotation = 0;
 					}
 
 				}
@@ -196,7 +241,7 @@ void AProceduralBuildingGenerator::Generate()
 							return opt != MeshType::WALL;
 						});
 						grid[x][y]->walls[Direction::BOTTOM]->offset.X = 0;
-						grid[x][x]->walls[Direction::BOTTOM]->zRotation = 90;
+						grid[x][y]->walls[Direction::BOTTOM]->zRotation = 90;
 					}
 					else if(dir == Direction::BOTTOM)
 					{
@@ -204,7 +249,7 @@ void AProceduralBuildingGenerator::Generate()
 							return opt != MeshType::WALL;
 						});
 						grid[x][y]->walls[Direction::RIGHT]->offset.Y = 400;
-						grid[x][x]->walls[Direction::RIGHT]->zRotation = 0;
+						grid[x][y]->walls[Direction::RIGHT]->zRotation = 0;
 					}
 				}
 				// Top Right Corner
@@ -216,7 +261,7 @@ void AProceduralBuildingGenerator::Generate()
 							return opt != MeshType::WALL;
 						});
 						grid[x][y]->walls[Direction::TOP]->offset.X = 400;
-						grid[x][x]->walls[Direction::TOP]->zRotation = 90;
+						grid[x][y]->walls[Direction::TOP]->zRotation = 90;
 					}
 					else if (dir == Direction::TOP)
 					{
@@ -224,7 +269,7 @@ void AProceduralBuildingGenerator::Generate()
 							return opt != MeshType::WALL;
 						});
 						grid[x][y]->walls[Direction::RIGHT]->offset.Y = 400;
-						grid[x][x]->walls[Direction::RIGHT]->zRotation = 0;
+						grid[x][y]->walls[Direction::RIGHT]->zRotation = 0;
 					}
 				}
 				continue;
@@ -383,6 +428,11 @@ void AProceduralBuildingGenerator::Generate()
 
 	SpawnBuilding();
 
+	// TODO: Recursive problem
+	GenerateRoomInfo();
+
+	// SpawnItems();
+
 
 	/////////////////////////////////////////////////////////////////////////////////
 	// Attempt to spawn exclusion zone around building for PCG
@@ -401,7 +451,7 @@ void AProceduralBuildingGenerator::Generate()
 	//}
 	/////////////////////////////////////////////////////////////////////////////////
 
-	generationFinishedCallback.ExecuteIfBound();
+	generationFinishedCallback.Broadcast();
 
 	generationFinished = true;
 
@@ -583,10 +633,16 @@ void AProceduralBuildingGenerator::SpawnBuilding()
 		{
 			// TODO: 400 is the assumed size of the mesh, we could just sample the mesh here to get the size.
 			//       The mesh would have top be set as to what is selected further above.
-			FTransform trans(FVector(x*400, y*400, GetActorLocation().Z));
+			FTransform trans(origin + FVector(x*400, y*400, 0));
+			FTransform ceilingTrans(origin + FVector(x * 400, y * 400, 400));
+
+			UE_LOG(LogTemp, Warning, TEXT("Spawn Building transform z: %f origin z: %f"), trans.GetLocation().Z, origin.Z);
 
 			// Spawn the floor
 			floorComponent->AddInstance(trans);
+
+			// Spawn the ceiling
+			ceilingComponent->AddInstance(ceilingTrans);
 
 			auto bottomInfo = grid[x][y]->walls[Direction::BOTTOM];
 			auto topInfo = grid[x][y]->walls[Direction::TOP];
@@ -610,30 +666,18 @@ void AProceduralBuildingGenerator::SpawnWallDoor(int x, int y, Direction dir, TS
 	// Verify that there is only one option otherwise spawn nothing
 	if (info->type.Num() == 1)
 	{
-		FVector spawnLocation = floorComponent->GetComponentLocation() + FVector(x * 400, y * 400, GetActorLocation().Z) + info->offset;
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("origin z: %f"), origin.Z));
+		FVector spawnLocation = origin + FVector(x * 400, y * 400, 0) + info->offset;
 		switch (info->type[0])
 		{
 			case MeshType::DOORWAY:
 			{
 				doorComponent->AddInstance(FTransform(FRotator(0, info->zRotation, 0), spawnLocation));
-				/*AStaticMeshActor* spawned = GetWorld()->SpawnActor<AStaticMeshActor>(spawnLocation, FRotator(0, info->zRotation, 0));
-				if (spawned)
-				{
-					spawned->GetStaticMeshComponent()->SetStaticMesh(doorOption);
-					spawned->Tags.AddUnique("Building");
-				}*/
-
 				break;
 			}
 			case MeshType::WALL:
 			{
 				wallComponent->AddInstance(FTransform(FRotator(0, info->zRotation, 0), spawnLocation));
-				/*AStaticMeshActor* spawned = GetWorld()->SpawnActor<AStaticMeshActor>(spawnLocation, FRotator(0, info->zRotation, 0));
-				if (spawned)
-				{
-					spawned->GetStaticMeshComponent()->SetStaticMesh(wallOption);
-					spawned->Tags.AddUnique("Building");
-				}*/
 				break;
 			}
 			case MeshType::NONE:
@@ -728,26 +772,332 @@ void AProceduralBuildingGenerator::setFloorOption(UStaticMesh* option)
 
 float AProceduralBuildingGenerator::getBuildingMinX()
 {
-	return floorComponent->GetComponentLocation().X;
+	return origin.X;
 }
 
 float AProceduralBuildingGenerator::getBuildingMaxX()
 {
 	// Getting the location of the original floor component. Adding the number of X Cells (represented by rows) * size of the floor component. Then adding the offset of X to shift the value to the edge of the floor
-	return floorComponent->GetComponentLocation().X + (numOfXCells * 400) + grid[numOfXCells][0]->walls[Direction::TOP]->offset.X;
+	return getBuildingMinX() + ((numOfXCells - 1) * 400) + grid[numOfXCells - 1][0]->walls[Direction::TOP]->offset.X;
 }
 
 float AProceduralBuildingGenerator::getBuildingMinY()
 {
-	return floorComponent->GetComponentLocation().Y;
+	return origin.Y;
 }
 
 float AProceduralBuildingGenerator::getBuildingMaxY()
 {
-	return floorComponent->GetComponentLocation().Y + (numOfYCells * 400) + grid[0][numOfYCells]->walls[Direction::RIGHT]->offset.Y;
+	return getBuildingMinY() + ((numOfYCells - 1) * 400) + grid[0][numOfYCells - 1]->walls[Direction::RIGHT]->offset.Y;
 }
 
 bool AProceduralBuildingGenerator::isGenerationFinished()
 {
 	return generationFinished;
+}
+
+FVector AProceduralBuildingGenerator::getOrigin()
+{
+	return origin;
+}
+
+void AProceduralBuildingGenerator::GenerateRoomInfo()
+{
+	// Should use something like Wave Function Collapse to gather all the information for the room
+	RoomDetection(true);
+}
+
+void AProceduralBuildingGenerator::RoomDetection(bool initialPick)
+{
+	if (initialPick)
+	{
+		// Get initial position to build out rooms from
+		int initialX = FMath::RandHelper(numOfXCells);
+		int initialY = FMath::RandHelper(numOfYCells);
+
+		// Call function to handle the cell being part of the room
+		RoomInformation(initialX, initialY, nullptr);
+	}
+	else
+	{
+		// Get next un assigned cell
+		TPair<int, int> xyPair;
+		if (GetNextCellUnassignedToRoom(xyPair))
+		{
+			RoomInformation(xyPair.Key, xyPair.Value, nullptr);
+		}
+	}
+
+	TPair<int, int> dummy;
+	// Detect if there are any cells not assigned a room
+	if (GetNextCellUnassignedToRoom(dummy))
+	{
+		return RoomDetection(false);
+	}
+	else
+	{
+		return;
+	}
+}
+
+void AProceduralBuildingGenerator::RoomInformation(int x, int y, TSharedPtr<RoomInfo> room)
+{
+	// How do we know if it's being added to part of an existing room or it's a new one?
+
+	if (!room)
+	{
+		room = MakeShared<RoomInfo>();
+	}
+
+	room->gridCellsInRoom.Add(TTuple<int, int>(x, y));
+
+	_cellsAssignedToARoom.Add(TTuple<int, int>(x, y));
+
+	_roomAssignmentQueue.Remove(TTuple<int, int, TSharedPtr<RoomInfo>>(x, y, room));
+
+	// Detect if room is complete or not
+	// Should have num of unique x many Left and Right Walls/Doors
+	// Should have num of unique y many Top and Bottom Walls
+	TSet<int> xs;
+	TSet<int> ys;
+	for (auto pair : room->gridCellsInRoom)
+	{
+		xs.Add(pair.Key);
+		ys.Add(pair.Value);
+	}
+
+	int leftCount = 0;
+	int rightCount = 0;
+	int topCount = 0;
+	int bottomCount = 0;
+	for (auto pair : room->gridCellsInRoom)
+	{
+		// Add for Left Wall or Door
+		if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::DOORWAY ||
+			grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::WALL)
+		{
+			leftCount++;
+		}
+
+		if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::DOORWAY ||
+			grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::WALL)
+		{
+			rightCount++;
+		}
+
+		if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::DOORWAY ||
+			grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::WALL)
+		{
+			topCount++;
+		}
+
+		if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::DOORWAY ||
+			grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::WALL)
+		{
+			bottomCount++;
+		}
+
+		// Check that counts match xs and ys
+		if (leftCount == xs.Num() && rightCount == xs.Num() &&
+			topCount == ys.Num() && bottomCount == ys.Num())
+		{
+			// Completed Room
+			return;
+		}
+		else
+		{
+			// Uncompleted Room
+
+			// Recursive call until room is completed
+
+			// How to detect what coordinates don't have the expected wall/door?
+			//  Why don't we use the for loop above and check the x and y and for the directions associated with the x and y
+
+		}
+
+
+		// Something To Ponder:
+		// If we start at a corner we could recursively call until we hit each other corner
+
+		if (!_cellsAssignedToARoom.Contains(TPair<int, int>(pair.Key, pair.Value)))
+		{
+			// Corners
+			if (pair.Key == 0 && pair.Value == 0)
+			{
+				// Top and Right
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					_roomAssignmentQueue.Add(TTuple<int, int, TSharedPtr<RoomInfo>>(pair.Key + 1, pair.Value, room));
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
+			}
+			else if (pair.Key == 0 && pair.Value == numOfYCells - 1)
+			{
+				// Top and Left
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
+			}
+			else if (pair.Key == numOfXCells - 1 && pair.Value == 0)
+			{
+				// Bottom and Right
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
+			}
+			else if (pair.Key == numOfXCells - 1 && pair.Value == numOfYCells - 1)
+			{
+				// Bottom and Left
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
+			}
+			// Min X and Middle Y
+			else if (pair.Key == 0)
+			{
+				// Left, Top and Right
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
+			}
+			// Max X and Middle Y
+			else if (pair.Key == numOfXCells - 1)
+			{
+				// Left, Bottom, and Right
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
+			}
+			// Middle X and Min Y
+			else if (pair.Value == 0)
+			{
+				// Top, Right, and Bottom
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
+			}
+			// Middle X and Max Y
+			else if (pair.Value == numOfYCells - 1)
+			{
+				// Top, Left, and Bottom
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
+			}
+			// All other cells
+			else
+			{
+				// Top, Left, Right, and Bottom
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::TOP]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key + 1, pair.Value, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::LEFT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value - 1, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::RIGHT]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key, pair.Value + 1, room);
+				}
+
+				if (grid[pair.Key][pair.Value]->walls[Direction::BOTTOM]->type[0] == MeshType::NONE)
+				{
+					return RoomInformation(pair.Key - 1, pair.Value, room);
+				}
+
+			}
+		}
+	}
+
+	// Do we have any items queued?
+}
+
+ bool AProceduralBuildingGenerator::GetNextCellUnassignedToRoom(TPair<int, int>& pair)
+{
+	for (int x = 0; x < numOfXCells; x++)
+	{
+		for (int y = 0; y < numOfYCells; y++)
+		{
+			if (!_cellsAssignedToARoom.Contains(TPair<int, int>(x, y)))
+			{
+				pair = TPair<int, int>(x, y);
+				return true;
+			}
+
+		}
+	}
+
+	return false;
 }

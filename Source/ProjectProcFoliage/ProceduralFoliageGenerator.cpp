@@ -103,7 +103,6 @@ void AProceduralFoliageGenerator::Tick(float DeltaTime)
 
 void AProceduralFoliageGenerator::setupForGeneration()
 {
-	UE_LOG(LogTemp, Warning, TEXT("SETUP FOR GENERATION -----------------"));
 	AActor* foundGenerator = UGameplayStatics::GetActorOfClass(GetWorld(), AProceduralBuildingGenerator::StaticClass());
 	buildingGenerator = Cast<AProceduralBuildingGenerator>(foundGenerator);
 
@@ -116,33 +115,50 @@ void AProceduralFoliageGenerator::setupForGeneration()
 		float maxX = buildingGenerator->getBuildingMaxX();
 		float minY = buildingGenerator->getBuildingMinY();
 		float maxY = buildingGenerator->getBuildingMaxY();
+		FVector buildingOrigin = buildingGenerator->getOrigin();
 
 		// Fill in grid 
-		/*FVector volumeLoc = _volume->GetComponentLocation();
-		FVector extent = _volume->GetLocalBounds().BoxExtent;
 
-		// Should be bottom left location at this point
-		volumeLoc = FVector(volumeLoc.X - extent.X, volumeLoc.Y - extent.Y, volumeLoc.Z);
-		float foliageMinX = GetActorLocation().X - boxExtent.X;
-		float foliageMinY = GetActorLocation().Y - boxExtent.Y;
-		float folaigeMaxX = GetActorLocation().X - boxExtent.X + (numOfXCells * xSeperationAmnt);
-		float folaigeMaxY = GetActorLocation().Y - boxExtent.Y + (numOfYCells * ySeperationAmnt);*/
+		//FHitResult t;
+		//DrawDebugLine(GetWorld(), FVector(buildingOrigin.X, buildingOrigin.Y, 10000), FVector(buildingOrigin.X, buildingOrigin.Y, -100), t.bBlockingHit ? FColor::Cyan : FColor::Black, true, -1, 0, 50.0);
 
+		//FHitResult min;
+		//DrawDebugLine(GetWorld(), FVector(minX, minY, 10000), FVector(minX, minY, -100), min.bBlockingHit ? FColor::Cyan : FColor::Yellow, true, -1, 0, 50.0);
 
-		int startingX = minX / xSeperationAmnt;
-		int startingY = minY / ySeperationAmnt;
-		int endingX = maxX / xSeperationAmnt;
-		int endingY = maxY / ySeperationAmnt;
+		//FHitResult max;
+		//DrawDebugLine(GetWorld(), FVector(maxX, maxY, 10000), FVector(maxX, maxY, -100), max.bBlockingHit ? FColor::Cyan : FColor::Magenta, true, -1, 0, 50.0);
+
+		// Translate Building Coordinates to be in reference to _volumes origin ( ActorLocation - boxExtent.X && ActorLocation - boxExtent.Y)
+		float volumeOriginX = GetActorLocation().X - boxExtent.X;
+		float volumeOriginY = GetActorLocation().Y - boxExtent.Y;
+
+		int startingX = FMath::Min<int>((buildingOrigin.X - volumeOriginX) / xSeperationAmnt, numOfXCells - 1);
+		int startingY = FMath::Min<int>((buildingOrigin.Y - volumeOriginY) / ySeperationAmnt, numOfYCells - 1);
+		int endingX = FMath::Min<int>((maxX - volumeOriginX) / xSeperationAmnt, numOfXCells - 1);
+		int endingY = FMath::Min<int>((maxY - volumeOriginY) / ySeperationAmnt, numOfYCells - 1);
 
 		for (int x = startingX; x <= endingX; x++)
 		{
 			for (int y = startingY; y <= endingY; y++)
 			{
+				auto origin = GetActorLocation();
+				float startX = origin.X - boxExtent.X + (x * xSeperationAmnt);
+				float startY = origin.Y - boxExtent.Y + (y * ySeperationAmnt);
+
+				FVector startLoc(startX, startY, origin.Z + boxExtent.Z);
+				FVector endLoc = startLoc - FVector(0, 0, 100000);
+
+				//FHitResult hit;
+				//DrawDebugLine(GetWorld(), FVector(startLoc.X, startLoc.Y, 10000), endLoc, hit.bBlockingHit ? FColor::Green : FColor::Silver, true, -1, 0, 50.0);
+
 				// Remove all non selected options
-				grid[x][y]->possibilities.RemoveAll([](GridOption opt) {
-					// Removes all entries that meet this condition
-					return opt != GridOption::Architecture;
-				});
+				if (grid.Num() > 0 && grid[x].Num() > 0)
+				{
+					grid[x][y]->possibilities.RemoveAll([this](GridOption opt) {
+						// Removes all entries that meet this condition
+						return opt != GridOption::Architecture;
+						});
+				}
 			}
 		}
 
@@ -638,13 +654,24 @@ void AProceduralFoliageGenerator::SpawnGrid()
 			float spawnX = FMath::RandRange(minX, maxX);
 			float spawnY = FMath::RandRange(minY, maxY);
 
-			//spawnX = origin.X - boxExtent.X + ((x + 0.5) * xSeperationAmnt);
-			//spawnY = origin.Y - boxExtent.Y + ((y + 0.5) * ySeperationAmnt);
+			// Forcing middle spawns for testing
+			/*spawnX = origin.X - boxExtent.X + ((x + 0.5) * xSeperationAmnt);
+			spawnY = origin.Y - boxExtent.Y + ((y + 0.5) * ySeperationAmnt);*/
+
+			// Spawn Floating Text to help debug grid
+			ATextRenderActor* text = GetWorld()->SpawnActor<ATextRenderActor>(FVector(spawnX, spawnY, origin.Z + 10), FRotator(90, 90, 90));
+			if (text)
+			{
+				auto rend = text->GetTextRender();
+				rend->SetText(FText::FromString(FString::Printf(TEXT("X: %d Y: %d"), x, y)));
+			}
 
 			// Line Trace to Landscape
 			FHitResult hit;
 			FVector startLoc(spawnX, spawnY, origin.Z + boxExtent.Z);
 			FVector endLoc(spawnX, spawnY, (origin.Z + boxExtent.Z) - 100000);
+
+			//UE_LOG(LogTemp, Warning, TEXT("Grid cell x: %d cell y: %d type: %s x: %f y: %f"), x, y, *UEnum::GetValueAsString(*grid[x][y]->possibilities.begin()), spawnX, spawnY);
 
 			//UE_LOG(LogTemp, Warning, TEXT("spawn grid x: %d grid y: %d spawn x: %d, spawn y: %d"), x, y, spawnX, spawnY);
 			GetWorld()->LineTraceSingleByChannel(hit, startLoc, endLoc, ECollisionChannel::ECC_WorldStatic);
